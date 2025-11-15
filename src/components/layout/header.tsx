@@ -16,46 +16,44 @@ import { LayoutGrid, LogOut, PlusCircle, User, MessageSquare } from 'lucide-reac
 import { Logo } from '../icons/logo';
 import { userJane } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
-  useEffect(() => {
-    const loginPaths = ['/login', '/signup'];
-    if (loginPaths.includes(pathname)) {
-        // You might want to persist login state in localStorage
-        // For this demo, we'll just simulate it.
-        const loggedInState = sessionStorage.getItem('isLoggedIn');
-        if (loggedInState === 'true') {
-            setIsLoggedIn(true);
-        }
-    }
-  }, [pathname]);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
+    const checkLogin = () => {
+        const loggedInState = sessionStorage.getItem('isLoggedIn');
+        setIsLoggedIn(loggedInState === 'true');
+    };
+
     window.addEventListener('scroll', handleScroll);
-    // Check login state on mount
-    const loggedInState = sessionStorage.getItem('isLoggedIn');
-    if (loggedInState === 'true') {
-      setIsLoggedIn(true);
+    window.addEventListener('storage', checkLogin); // Listen for storage changes
+    checkLogin(); // Initial check
+
+    return () => {
+        window.removeEventListener('scroll', handleScroll);
+        window.removeEventListener('storage', checkLogin);
     }
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleLogin = () => {
     sessionStorage.setItem('isLoggedIn', 'true');
     setIsLoggedIn(true);
+    router.push('/dashboard');
   };
   
   const handleLogout = () => {
     sessionStorage.removeItem('isLoggedIn');
     setIsLoggedIn(false);
+    router.push('/');
   };
 
   const UserMenu = () => (
@@ -107,10 +105,10 @@ export default function Header() {
 
   const AuthButtons = () => (
     <div className="flex items-center gap-2">
-      <Button variant="ghost" asChild onClick={handleLogin}>
+      <Button variant="ghost" asChild>
         <Link href="/login">Log In</Link>
       </Button>
-      <Button asChild className='bg-primary hover:bg-primary/90' onClick={handleLogin}>
+      <Button asChild className='bg-primary hover:bg-primary/90'>
         <Link href="/signup">Sign Up</Link>
       </Button>
     </div>
@@ -122,20 +120,13 @@ export default function Header() {
         isScrolled ? 'border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60' : ''
       )}>
       <div className="container mx-auto flex h-16 items-center px-4">
-        <div className="flex-1 flex justify-start">
+        <div className="flex flex-1 items-center justify-start">
             <Link href="/" className="flex items-center gap-2">
             <Logo />
             </Link>
         </div>
 
-
-        <div className="flex-1 flex justify-center">
-            <Button variant="link" asChild>
-                <Link href="/">Browse Items</Link>
-            </Button>
-        </div>
-
-        <div className="flex-1 flex justify-end items-center gap-4">
+        <div className="flex flex-1 justify-end items-center gap-4">
           <Button variant="outline" className="hidden sm:flex" asChild>
             <Link href="/listings/new">
               <PlusCircle className="mr-2 h-4 w-4" />

@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Card,
   CardContent,
@@ -22,96 +22,64 @@ import ItemCard from '@/components/shared/item-card';
 import { items as allItems } from '@/lib/placeholder-data';
 import {
   CalendarIcon,
-  Search,
   SlidersHorizontal,
-  MapPin,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import type { Item } from '@/lib/types';
-import { useRouter } from 'next/navigation';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 
-export default function Home() {
-  const [priceRange, setPriceRange] = React.useState([500]);
-  const [featuredItems, setFeaturedItems] = React.useState<Item[]>([]);
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [location, setLocation] = React.useState('');
-  const [category, setCategory] = React.useState('all');
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
+function BrowsePageContent() {
+  const searchParams = useSearchParams();
 
-  const router = useRouter();
+  const [filteredItems, setFilteredItems] = React.useState<Item[]>(allItems);
+  const [searchTerm, setSearchTerm] = React.useState(searchParams.get('q') || '');
+  const [category, setCategory] = React.useState(searchParams.get('category') || 'all');
+  const [priceRange, setPriceRange] = React.useState([Number(searchParams.get('price')) || 500]);
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(() => {
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+    if (from) {
+        return { from: parseISO(from), to: to ? parseISO(to) : undefined };
+    }
+    return undefined;
+  });
 
-  // Show a selection of featured items on initial load
-  React.useEffect(() => {
-    setFeaturedItems(allItems.slice(0, 6));
-  }, []);
+  const handleFilterChange = () => {
+    let tempItems = allItems;
 
-  const handleSearch = () => {
-    const queryParams = new URLSearchParams();
-    if (searchTerm) queryParams.set('q', searchTerm);
-    if (location) queryParams.set('location', location);
-    if (category !== 'all') queryParams.set('category', category);
-    if (priceRange[0] < 500) queryParams.set('price', priceRange[0].toString());
-    if (dateRange?.from) queryParams.set('from', dateRange.from.toISOString());
-    if (dateRange?.to) queryParams.set('to', dateRange.to.toISOString());
+    // Filter by search term
+    if (searchTerm) {
+      tempItems = tempItems.filter(item =>
+        item.title.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
 
-    router.push(`/browse?${queryParams.toString()}`);
+    // Filter by category
+    if (category !== 'all') {
+      tempItems = tempItems.filter(item => item.category === category);
+    }
+    
+    // Filter by price
+    tempItems = tempItems.filter(item => item.dailyRate <= priceRange[0]);
+
+    // Note: Date filtering logic would be more complex and require checking item availability arrays.
+    // For this prototype, we are not filtering by date on the client side.
+
+    setFilteredItems(tempItems);
   };
   
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-        handleSearch();
-    }
-  }
+  React.useEffect(() => {
+    handleFilterChange();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, category, priceRange, dateRange]);
 
 
   return (
-    <>
-      <section className="relative w-full bg-primary/10 py-20 md:py-32 lg:py-40">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="font-headline text-4xl font-bold tracking-tight text-foreground md:text-6xl lg:text-7xl">
-            Rent Anything, Anywhere
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground md:text-xl">
-            From power tools to party supplies, find what you need from people
-            in your community.
-          </p>
-          <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-2 sm:flex-row">
-            <div className="relative flex-grow">
-              <Input
-                type="text"
-                placeholder="What are you looking for?"
-                className="h-12 pl-10 text-base"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-              />
-              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-            </div>
-            <div className="relative flex-grow">
-              <Input
-                type="text"
-                placeholder="Location (e.g., 'New York, NY')"
-                className="h-12 pl-10 text-base"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-              />
-              <MapPin className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-            </div>
-            <Button size="lg" className="h-12 bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleSearch}>
-              <Search className="mr-2 h-5 w-5" />
-              Search
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      <div className="container mx-auto grid grid-cols-1 gap-8 px-4 py-12 md:grid-cols-4">
-        <aside className="hidden md:block md:col-span-1">
+    <div className="container mx-auto grid grid-cols-1 gap-8 px-4 py-12 md:grid-cols-4">
+        <aside className="md:col-span-1">
           <Card className="sticky top-24">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -140,7 +108,7 @@ export default function Home() {
               <div className="space-y-2">
                 <Label>Max Daily Rate: ${priceRange[0]}</Label>
                 <Slider
-                  defaultValue={[500]}
+                  value={priceRange}
                   max={500}
                   step={10}
                   onValueChange={setPriceRange}
@@ -191,26 +159,37 @@ export default function Home() {
                   <Label htmlFor="delivery">Delivery Available</Label>
                 </div>
               </div>
-              <Button onClick={handleSearch} className="w-full">Apply Filters</Button>
             </CardContent>
           </Card>
         </aside>
 
         <main className="md:col-span-3">
-          <h2 className="mb-6 text-3xl font-bold font-headline">
-            Featured Items
-          </h2>
-          {featuredItems.length > 0 ? (
+            <div className="mb-6">
+                <h2 className="text-3xl font-bold font-headline">
+                    Search Results
+                </h2>
+                 <p className="text-muted-foreground">{filteredItems.length} items found</p>
+            </div>
+          
+          {filteredItems.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {featuredItems.map((item) => (
+              {filteredItems.map((item) => (
                 <ItemCard key={item.id} item={item} />
               ))}
             </div>
           ) : (
-            <p>No items match your search criteria.</p>
+            <p>No items match your search criteria. Try adjusting your filters.</p>
           )}
         </main>
       </div>
-    </>
   );
+}
+
+
+export default function BrowsePage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <BrowsePageContent />
+        </Suspense>
+    )
 }
