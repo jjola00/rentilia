@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Card,
   CardContent,
@@ -5,52 +7,47 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { DollarSign, Box, CalendarCheck, Users } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { userJohn } from '@/lib/placeholder-data';
+import { DollarSign, Box, CalendarCheck, Users, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth/AuthProvider';
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  
   const stats = [
-    { title: 'Total Earnings', value: '$4,250', icon: DollarSign },
-    { title: 'Active Listings', value: '8', icon: Box },
-    { title: 'Active Bookings', value: '3', icon: CalendarCheck },
-    { title: 'Total Renters', value: '42', icon: Users },
+    { title: 'Total Earnings', value: '$0', icon: DollarSign },
+    { title: 'Active Listings', value: '0', icon: Box },
+    { title: 'Active Bookings', value: '0', icon: CalendarCheck },
+    { title: 'Total Renters', value: '0', icon: Users },
   ];
 
-  const recentActivity = [
-    {
-      user: userJohn,
-      item: 'Professional DSLR Camera',
-      status: 'booked',
-      date: '2 hours ago',
-    },
-    {
-      user: { name: 'Emily R.', avatarUrl: 'https://picsum.photos/seed/203/100/100' },
-      item: 'Large Event Tent',
-      status: 'returned',
-      date: '1 day ago',
-    },
-     {
-      user: { name: 'Mark L.', avatarUrl: 'https://picsum.photos/seed/205/100/100' },
-      item: 'High-Powered Electric Drill',
-      status: 'pending',
-      date: '2 days ago',
-    },
-  ];
+  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'there';
 
   return (
     <div className="space-y-6">
+      {/* Welcome Message */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">Welcome back, {userName}! 👋</CardTitle>
+          <CardDescription>
+            Your rental marketplace dashboard. Start by listing your first item or browse available rentals.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex gap-4">
+          <Button asChild>
+            <Link href="/listings/new">
+              <Plus className="mr-2 h-4 w-4" />
+              List an Item
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/browse">Browse Items</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Stats */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.title}>
@@ -62,60 +59,41 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stat.title === 'Active Listings' && 'List items to start earning'}
+                {stat.title === 'Active Bookings' && 'No active bookings yet'}
+                {stat.title === 'Total Earnings' && 'Start renting to earn'}
+                {stat.title === 'Total Renters' && 'Build your renter base'}
+              </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
+      {/* Recent Activity - Empty State */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
           <CardDescription>
-            An overview of your most recent rental activities.
+            Your rental activity will appear here once you start listing or booking items.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Renter</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recentActivity.map((activity, index) => (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{activity.item}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={activity.user.avatarUrl} alt={activity.user.name} />
-                        <AvatarFallback>{activity.user.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <span>{activity.user.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={
-                      activity.status === 'booked' ? 'default' :
-                      activity.status === 'returned' ? 'secondary' : 'outline'
-                    } className="capitalize">
-                      {activity.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{activity.date}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild>
-                        <Link href="/dashboard/bookings">View</Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Box className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No activity yet</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+              Start by listing an item you want to rent out, or browse available items to book.
+            </p>
+            <div className="flex gap-4">
+              <Button asChild>
+                <Link href="/listings/new">List an Item</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/browse">Browse Items</Link>
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

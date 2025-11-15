@@ -14,94 +14,84 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LayoutGrid, LogOut, PlusCircle, User, MessageSquare } from 'lucide-react';
 import { Logo } from '@/components/icons/logo';
-import { userJane } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth/AuthProvider';
 
 export default function Header() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-
+  const { user, signOut, loading } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
-    const checkLogin = () => {
-        const loggedInState = sessionStorage.getItem('isLoggedIn');
-        setIsLoggedIn(loggedInState === 'true');
-    };
 
     window.addEventListener('scroll', handleScroll);
-    window.addEventListener('storage', checkLogin); // Listen for storage changes
-    checkLogin(); // Initial check
 
     return () => {
         window.removeEventListener('scroll', handleScroll);
-        window.removeEventListener('storage', checkLogin);
     }
   }, []);
-
-  const handleLogin = () => {
-    sessionStorage.setItem('isLoggedIn', 'true');
-    setIsLoggedIn(true);
-    router.push('/dashboard');
-  };
   
-  const handleLogout = () => {
-    sessionStorage.removeItem('isLoggedIn');
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    await signOut();
     router.push('/');
   };
 
-  const UserMenu = () => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar className="h-10 w-10 border-2 border-primary/50">
-            <AvatarImage src={userJane.avatarUrl} alt={userJane.name} />
-            <AvatarFallback>{userJane.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{userJane.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {userJane.location}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard">
-            <LayoutGrid className="mr-2 h-4 w-4" />
-            <span>Dashboard</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/messages">
-            <MessageSquare className="mr-2 h-4 w-4" />
-            <span>Messages</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard/profile">
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+  const UserMenu = () => {
+    const userName = user?.user_metadata?.full_name || user?.email || 'User';
+    const userInitial = userName.charAt(0).toUpperCase();
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+            <Avatar className="h-10 w-10 border-2 border-primary/50">
+              <AvatarImage src={user?.user_metadata?.avatar_url} alt={userName} />
+              <AvatarFallback>{userInitial}</AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56" align="end" forceMount>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium leading-none">{userName}</p>
+              <p className="text-xs leading-none text-muted-foreground">
+                {user?.email}
+              </p>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard">
+              <LayoutGrid className="mr-2 h-4 w-4" />
+              <span>Dashboard</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/messages">
+              <MessageSquare className="mr-2 h-4 w-4" />
+              <span>Messages</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/profile">
+              <User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Log out</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
 
   const AuthButtons = () => (
     <div className="flex items-center gap-2">
@@ -140,7 +130,7 @@ export default function Header() {
               List an Item
             </Link>
           </Button>
-          {(isLoggedIn ? <UserMenu /> : <AuthButtons />)}
+          {loading ? null : (user ? <UserMenu /> : <AuthButtons />)}
         </div>
       </div>
     </header>
