@@ -13,6 +13,18 @@ export default function Footer() {
             <p className="text-sm text-muted-foreground">
               Rent anything, anywhere. Your community marketplace.
             </p>
+            <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                    © {new Date().getFullYear()} Rentilia, Inc. All rights reserved.
+                </p>
+                <div className="flex space-x-2">
+                <Button variant="ghost" size="icon" asChild>
+                    <Link href="#">
+                    <Linkedin className="h-5 w-5" />
+                    </Link>
+                </Button>
+                </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-8 text-sm md:col-span-2 md:grid-cols-3">
@@ -38,18 +50,6 @@ export default function Footer() {
               </li>
             </ul>
           </div>
-        </div>
-        <div className="mt-8 flex flex-col items-center justify-between border-t pt-4 sm:flex-row">
-            <p className="text-sm text-muted-foreground">
-                 © {new Date().getFullYear()} Rentilia, Inc. All rights reserved.
-            </p>
-            <div className="flex space-x-2">
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="#">
-                  <Linkedin className="h-5 w-5" />
-                </Link>
-              </Button>
-            </div>
         </div>
       </div>
     </footer>
