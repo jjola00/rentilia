@@ -84,7 +84,9 @@ export default function Header() {
       <Button variant="ghost" asChild>
         <Link href="/login">Log In</Link>
       </Button>
-      <Button onClick={() => setIsLoggedIn(true)} className='bg-primary hover:bg-primary/90'>Sign Up</Button>
+      <Button asChild className='bg-primary hover:bg-primary/90'>
+        <Link href="/signup">Sign Up</Link>
+      </Button>
     </div>
   );
 

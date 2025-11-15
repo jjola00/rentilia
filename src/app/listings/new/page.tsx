@@ -23,13 +23,22 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { UploadCloud, FileCheck2, ArrowLeft } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { useRouter } from 'next/navigation';
 
 export default function NewListingPage() {
   const [step, setStep] = React.useState(1);
   const totalSteps = 3;
+  const router = useRouter();
 
   const nextStep = () => setStep((s) => Math.min(s + 1, totalSteps));
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
+  
+  const handleFinish = (e: React.FormEvent) => {
+    e.preventDefault();
+    // In a real app, you'd handle form submission here.
+    // For now, let's redirect to the new listing.
+    router.push('/listings/1');
+  };
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-12">
@@ -49,19 +58,19 @@ export default function NewListingPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={handleFinish}>
             {step === 1 && (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="title" className="text-lg font-medium">Item Title</Label>
-                  <Input id="title" placeholder="e.g., Professional DSLR Camera" />
+                  <Input id="title" placeholder="e.g., Professional DSLR Camera" required />
                   <p className="text-sm text-muted-foreground">
                     A catchy and descriptive title will help renters find your item.
                   </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category" className="text-lg font-medium">Category</Label>
-                  <Select>
+                  <Select required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
@@ -80,6 +89,7 @@ export default function NewListingPage() {
                     id="description"
                     placeholder="Describe your item in detail. Include its condition, what's included, and any special instructions."
                     rows={6}
+                    required
                   />
                 </div>
               </div>
@@ -90,14 +100,14 @@ export default function NewListingPage() {
                   <Label htmlFor="dailyRate" className="text-lg font-medium">Daily Rental Rate</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input id="dailyRate" type="number" placeholder="50.00" className="pl-7" />
+                    <Input id="dailyRate" type="number" placeholder="50.00" className="pl-7" required />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="securityDeposit" className="text-lg font-medium">Security Deposit</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input id="securityDeposit" type="number" placeholder="200.00" className="pl-7" />
+                    <Input id="securityDeposit" type="number" placeholder="200.00" className="pl-7" required />
                   </div>
                   <p className="text-sm text-muted-foreground">
                     This is a hold placed on the renter's card, released after the item is returned safely.

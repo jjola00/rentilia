@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import { items } from '@/lib/placeholder-data';
 import { notFound } from 'next/navigation';
@@ -20,7 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Rating from '@/components/shared/rating';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/componentsa/ui/calendar';
+import { Calendar } from '@/components/ui/calendar';
 import { MapPin, ShieldCheck, Truck, Package } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';

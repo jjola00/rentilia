@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,8 +13,17 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons/logo';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+    const router = useRouter();
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        // In a real app, you'd have authentication logic here.
+        // For now, we'll just redirect to the dashboard.
+        router.push('/dashboard');
+    }
+
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
@@ -22,6 +33,7 @@ export default function LoginPage() {
             </Link>
         </div>
         <Card>
+            <form onSubmit={handleLogin}>
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl font-headline">Welcome Back</CardTitle>
             <CardDescription>
@@ -31,7 +43,7 @@ export default function LoginPage() {
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="m@example.com" />
+              <Input id="email" type="email" placeholder="m@example.com" required />
             </div>
             <div className="grid gap-2">
                 <div className="flex items-center justify-between">
@@ -40,9 +52,9 @@ export default function LoginPage() {
                         Forgot password?
                     </Link>
                 </div>
-              <Input id="password" type="password" />
+              <Input id="password" type="password" required />
             </div>
-            <Button className="w-full">Login</Button>
+            <Button type="submit" className="w-full">Login</Button>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
@@ -61,6 +73,7 @@ export default function LoginPage() {
           <CardFooter className="flex justify-center text-sm">
             <p>Don&apos;t have an account? <Link href="/signup" className="font-semibold text-primary hover:underline">Sign up</Link></p>
           </CardFooter>
+          </form>
         </Card>
       </div>
     </div>
