@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Logo } from '@/components/icons/logo';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Box,
@@ -35,6 +35,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const navItems = [
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
     { href: '/dashboard/listings', label: 'My Listings', icon: Box },
@@ -42,6 +43,12 @@ export default function DashboardLayout({
     { href: '/dashboard/profile', label: 'Edit Profile', icon: User },
     { href: '/messages', label: 'Messages', icon: MessageSquare },
   ];
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('isLoggedIn');
+    router.push('/');
+  };
+
 
   return (
     <SidebarProvider>
@@ -80,9 +87,9 @@ export default function DashboardLayout({
             </Avatar>
             <div className="overflow-hidden group-data-[collapsible=icon]:hidden">
               <p className="font-semibold truncate">{userJane.name}</p>
-              <p className="text-xs text-muted-foreground truncate">Logout</p>
+               <button onClick={handleLogout} className="text-xs text-muted-foreground truncate hover:underline">Logout</button>
             </div>
-            <Button variant="ghost" size="icon" className="group-data-[collapsible=icon]:hidden ml-auto">
+            <Button variant="ghost" size="icon" className="group-data-[collapsible=icon]:hidden ml-auto" onClick={handleLogout}>
                 <LogOut className="h-5 w-5" />
             </Button>
           </div>
