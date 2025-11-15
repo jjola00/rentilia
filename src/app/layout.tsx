@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import { usePathname } from 'next/navigation';
+import { AuthProvider } from '@/lib/auth/AuthProvider';
 
 const metadata: Metadata = {
   title: 'Rentilia - Rent Anything, Anywhere',
@@ -39,12 +40,14 @@ export default function RootLayout({
           'min-h-screen bg-background font-body antialiased'
         )}
       >
-        <div className={cn("relative flex min-h-dvh flex-col", { 'bg-card': isDashboard })}>
-          {!isDashboard && <Header />}
-          <main className={cn({"flex-1": !isDashboard})}>{children}</main>
-          {!isDashboard && <Footer />}
-        </div>
-        <Toaster />
+        <AuthProvider>
+          <div className={cn("relative flex min-h-dvh flex-col", { 'bg-card': isDashboard })}>
+            {!isDashboard && <Header />}
+            <main className={cn({"flex-1": !isDashboard})}>{children}</main>
+            {!isDashboard && <Footer />}
+          </div>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
