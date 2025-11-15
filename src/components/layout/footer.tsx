@@ -10,41 +10,47 @@ export default function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div className="space-y-4 md:col-span-2">
             <Logo />
-            <p className="text-sm text-muted-foreground">
+            <p className="max-w-xs text-sm text-muted-foreground">
               Rent anything, anywhere. Your community marketplace.
             </p>
-            <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                    © {new Date().getFullYear()} Rentilia, Inc. All rights reserved.
-                </p>
-                <div className="flex space-x-2">
-                <Button variant="ghost" size="icon" asChild>
-                    <Link href="#">
-                    <Linkedin className="h-5 w-5" />
-                    </Link>
-                </Button>
-                </div>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span>© {new Date().getFullYear()} Rentilia, Inc. All rights reserved.</span>
+              <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
+                <Link href="#">
+                  <Linkedin className="h-5 w-5" />
+                  <span className="sr-only">LinkedIn</span>
+                </Link>
+              </Button>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-8 text-sm md:col-span-2 md:grid-cols-3">
-             <ul className="space-y-2">
+            <ul className="space-y-2">
               <li>
-                <Link href="#" className="text-muted-foreground hover:text-foreground">
+                <Link
+                  href="#"
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   About Us
                 </Link>
               </li>
             </ul>
-             <ul className="space-y-2">
-                 <li>
-                    <Link href="#" className="text-muted-foreground hover:text-foreground">
-                    Contact Us
-                    </Link>
-                </li>
-            </ul>
-             <ul className="space-y-2">
+            <ul className="space-y-2">
               <li>
-                <Link href="#" className="text-muted-foreground hover:text-foreground">
+                <Link
+                  href="#"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Contact Us
+                </Link>
+              </li>
+            </ul>
+            <ul className="space-y-2">
+              <li>
+                <Link
+                  href="#"
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   Terms of Service
                 </Link>
               </li>
