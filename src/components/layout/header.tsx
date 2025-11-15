@@ -95,21 +95,21 @@ export default function Header() {
         'sticky top-0 z-50 w-full border-b border-transparent transition-all',
         isScrolled ? 'border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60' : ''
       )}>
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <Logo />
-        </Link>
+      <div className="container mx-auto flex h-16 items-center px-4">
+        <div className="flex-1 flex justify-start">
+            <Link href="/" className="flex items-center gap-2">
+            <Logo />
+            </Link>
+        </div>
 
-        <div className="hidden items-center gap-4 md:flex">
+
+        <div className="flex-1 flex justify-center">
             <Button variant="link" asChild>
                 <Link href="/">Browse Items</Link>
             </Button>
-            <Button variant="link" asChild>
-                <Link href="/listings/new">List an Item</Link>
-            </Button>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex-1 flex justify-end items-center gap-4">
           <Button variant="outline" className="hidden sm:flex" asChild>
             <Link href="/listings/new">
               <PlusCircle className="mr-2 h-4 w-4" />
