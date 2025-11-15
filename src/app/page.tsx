@@ -19,7 +19,7 @@ import {
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import ItemCard from '@/components/shared/item-card';
-import { items } from '@/lib/placeholder-data';
+import { items as allItems } from '@/lib/placeholder-data';
 import {
   CalendarIcon,
   Search,
@@ -27,9 +27,52 @@ import {
   MapPin,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import type { Item } from '@/lib/types';
 
 export default function Home() {
-  const [priceRange, setPriceRange] = React.useState([50]);
+  const [priceRange, setPriceRange] = React.useState([500]);
+  const [filteredItems, setFilteredItems] = React.useState<Item[]>(allItems);
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [category, setCategory] = React.useState('all');
+
+  const handleSearch = () => {
+    let tempItems = allItems;
+
+    // Filter by search term
+    if (searchTerm) {
+      tempItems = tempItems.filter(item =>
+        item.title.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by category
+    if (category !== 'all') {
+      tempItems = tempItems.filter(item => item.category === category);
+    }
+    
+    // Filter by price
+    tempItems = tempItems.filter(item => item.dailyRate <= priceRange[0]);
+
+
+    setFilteredItems(tempItems);
+  };
+  
+  // Handle initial search and when filters change
+  React.useEffect(() => {
+    handleSearch();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceRange, category]);
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }
+  
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+        handleSearch();
+    }
+  }
+
 
   return (
     <>
@@ -48,6 +91,9 @@ export default function Home() {
                 type="text"
                 placeholder="What are you looking for?"
                 className="h-12 pl-10 text-base"
+                value={searchTerm}
+                onChange={handleSearchInputChange}
+                onKeyDown={handleSearchKeyDown}
               />
               <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             </div>
@@ -59,7 +105,7 @@ export default function Home() {
               />
               <MapPin className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             </div>
-            <Button size="lg" className="h-12 bg-accent text-accent-foreground hover:bg-accent/90">
+            <Button size="lg" className="h-12 bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleSearch}>
               <Search className="mr-2 h-5 w-5" />
               Search
             </Button>
@@ -79,16 +125,17 @@ export default function Home() {
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label>Category</Label>
-                <Select>
+                <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="tools">Tools & Equipment</SelectItem>
-                    <SelectItem value="party">Party & Events</SelectItem>
-                    <SelectItem value="electronics">Electronics</SelectItem>
-                    <SelectItem value="sports">Sports & Outdoors</SelectItem>
-                    <SelectItem value="vehicles">Vehicles</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="Tools & Equipment">Tools & Equipment</SelectItem>
+                    <SelectItem value="Party & Events">Party & Events</SelectItem>
+                    <SelectItem value="Electronics">Electronics</SelectItem>
+                    <SelectItem value="Sports & Outdoors">Sports & Outdoors</SelectItem>
+                    <SelectItem value="Vehicles">Vehicles</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -96,7 +143,7 @@ export default function Home() {
               <div className="space-y-2">
                 <Label>Max Daily Rate: ${priceRange[0]}</Label>
                 <Slider
-                  defaultValue={[50]}
+                  defaultValue={[500]}
                   max={500}
                   step={10}
                   onValueChange={setPriceRange}
@@ -126,12 +173,18 @@ export default function Home() {
         </aside>
 
         <main className="md:col-span-3">
-          <h2 className="mb-6 text-3xl font-bold font-headline">Featured Items</h2>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((item) => (
-              <ItemCard key={item.id} item={item} />
-            ))}
-          </div>
+          <h2 className="mb-6 text-3xl font-bold font-headline">
+            {searchTerm || category !== 'all' ? 'Search Results' : 'Featured Items'}
+          </h2>
+          {filteredItems.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredItems.map((item) => (
+                <ItemCard key={item.id} item={item} />
+              ))}
+            </div>
+          ) : (
+            <p>No items match your search criteria.</p>
+          )}
         </main>
       </div>
     </>

@@ -21,7 +21,8 @@ export default function SignupPage() {
     const handleSignup = (e: React.FormEvent) => {
         e.preventDefault();
         // In a real app, you'd have signup logic here.
-        // For now, we'll just redirect to the dashboard.
+        // For this demo, we'll just simulate the login.
+        sessionStorage.setItem('isLoggedIn', 'true');
         router.push('/dashboard');
     }
 

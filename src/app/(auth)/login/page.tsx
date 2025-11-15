@@ -20,7 +20,8 @@ export default function LoginPage() {
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
         // In a real app, you'd have authentication logic here.
-        // For now, we'll just redirect to the dashboard.
+        // For this demo, we'll just simulate the login.
+        sessionStorage.setItem('isLoggedIn', 'true');
         router.push('/dashboard');
     }
 

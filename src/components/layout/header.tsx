@@ -16,21 +16,47 @@ import { LayoutGrid, LogOut, PlusCircle, User, MessageSquare } from 'lucide-reac
 import { Logo } from '../icons/logo';
 import { userJane } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
+import { usePathname } from 'next/navigation';
 
 export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    setIsClient(true);
+    const loginPaths = ['/login', '/signup'];
+    if (loginPaths.includes(pathname)) {
+        // You might want to persist login state in localStorage
+        // For this demo, we'll just simulate it.
+        const loggedInState = sessionStorage.getItem('isLoggedIn');
+        if (loggedInState === 'true') {
+            setIsLoggedIn(true);
+        }
+    }
+  }, [pathname]);
+
+  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener('scroll', handleScroll);
+    // Check login state on mount
+    const loggedInState = sessionStorage.getItem('isLoggedIn');
+    if (loggedInState === 'true') {
+      setIsLoggedIn(true);
+    }
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleLogin = () => {
+    sessionStorage.setItem('isLoggedIn', 'true');
+    setIsLoggedIn(true);
+  };
+  
+  const handleLogout = () => {
+    sessionStorage.removeItem('isLoggedIn');
+    setIsLoggedIn(false);
+  };
 
   const UserMenu = () => (
     <DropdownMenu>
@@ -71,7 +97,7 @@ export default function Header() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => setIsLoggedIn(false)}>
+        <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>
@@ -81,10 +107,10 @@ export default function Header() {
 
   const AuthButtons = () => (
     <div className="flex items-center gap-2">
-      <Button variant="ghost" asChild>
+      <Button variant="ghost" asChild onClick={handleLogin}>
         <Link href="/login">Log In</Link>
       </Button>
-      <Button asChild className='bg-primary hover:bg-primary/90'>
+      <Button asChild className='bg-primary hover:bg-primary/90' onClick={handleLogin}>
         <Link href="/signup">Sign Up</Link>
       </Button>
     </div>
@@ -116,7 +142,7 @@ export default function Header() {
               List an Item
             </Link>
           </Button>
-          {isClient && (isLoggedIn ? <UserMenu /> : <AuthButtons />)}
+          {(isLoggedIn ? <UserMenu /> : <AuthButtons />)}
         </div>
       </div>
     </header>
