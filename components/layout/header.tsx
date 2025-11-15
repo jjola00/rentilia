@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LayoutGrid, LogOut, PlusCircle, User, MessageSquare } from 'lucide-react';
-import { Logo } from '../icons/logo';
+import { Logo } from '@/components/icons/logo';
 import { userJane } from '@/lib/placeholder-data';
 import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from 'next/navigation';

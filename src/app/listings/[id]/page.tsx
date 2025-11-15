@@ -26,8 +26,9 @@ import { MapPin, ShieldCheck, Truck, Package } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 
-export default function ListingPage({ params }: { params: { id: string } }) {
-  const item = items.find((i) => i.id === params.id);
+export default async function ListingPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const item = items.find((i) => i.id === id);
 
   if (!item) {
     notFound();
