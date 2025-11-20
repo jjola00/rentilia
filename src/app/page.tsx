@@ -19,12 +19,12 @@ import {
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import ItemCard from '@/components/shared/item-card';
-import { items as allItems } from '@/lib/placeholder-data';
 import {
   CalendarIcon,
   Search,
   SlidersHorizontal,
   MapPin,
+  PackageSearch,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import type { Item } from '@/lib/types';
@@ -36,6 +36,7 @@ import type { DateRange } from 'react-day-picker';
 
 export default function Home() {
   const [priceRange, setPriceRange] = React.useState([500]);
+  // Data fetching will be implemented here. For now, we use an empty array.
   const [featuredItems, setFeaturedItems] = React.useState<Item[]>([]);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [location, setLocation] = React.useState('');
@@ -43,11 +44,6 @@ export default function Home() {
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
 
   const router = useRouter();
-
-  // Show a selection of featured items on initial load
-  React.useEffect(() => {
-    setFeaturedItems(allItems.slice(0, 6));
-  }, []);
 
   const handleSearch = () => {
     const queryParams = new URLSearchParams();
@@ -207,7 +203,11 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <p>No items match your search criteria.</p>
+             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-12 text-center">
+                <PackageSearch className="h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-xl font-semibold">No items to display</h3>
+                <p className="mt-2 text-sm text-muted-foreground">Check back later for featured items, or try a search.</p>
+            </div>
           )}
         </main>
       </div>

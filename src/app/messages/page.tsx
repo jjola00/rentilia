@@ -1,16 +1,46 @@
+'use client';
+
+import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Search, Send, Paperclip } from 'lucide-react';
-import { userJane, userJohn } from '@/lib/placeholder-data';
+import { Search, Send, Paperclip, MessageSquare } from 'lucide-react';
+import type { User } from '@/lib/types';
+
+type Conversation = {
+    user: User;
+    lastMessage: string;
+    time: string;
+    unread: number;
+    active: boolean;
+}
 
 export default function MessagesPage() {
-  const conversations = [
-    { user: userJane, lastMessage: 'Sounds good! See you then.', time: '10:42 AM', unread: 0, active: true },
-    { user: userJohn, lastMessage: 'Is the camera available next weekend?', time: 'Yesterday', unread: 2, active: false },
-  ];
+  // This will be replaced by data fetched from Supabase
+  const [conversations, setConversations] = React.useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = React.useState<Conversation | null>(null);
+
+  const EmptyState = () => (
+    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <MessageSquare className="h-16 w-16 text-muted-foreground" />
+        <h3 className="mt-4 text-xl font-semibold">No messages yet</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+            When you start a conversation with a renter or owner, it will appear here.
+        </p>
+    </div>
+  );
+  
+  const ChatEmptyState = () => (
+    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <MessageSquare className="h-24 w-24 text-muted-foreground/20" />
+        <h3 className="mt-4 text-2xl font-semibold">Select a conversation</h3>
+        <p className="mt-2 text-md text-muted-foreground">
+            Choose a conversation from the left to start chatting.
+        </p>
+    </div>
+  );
 
   return (
     <div className="container mx-auto max-w-6xl px-0 py-0 md:px-4 md:py-12">
@@ -25,11 +55,11 @@ export default function MessagesPage() {
             </div>
             </div>
             <ScrollArea className="flex-1">
-            {conversations.map((convo, index) => (
+            {conversations.length > 0 ? conversations.map((convo, index) => (
                 <div key={index} className={cn(
                     "flex items-start gap-4 p-4 cursor-pointer hover:bg-muted/50",
                     convo.active ? 'bg-primary/10' : ''
-                )}>
+                )} onClick={() => setSelectedConversation(convo)}>
                 <Avatar className="h-12 w-12 border">
                     <AvatarImage src={convo.user.avatarUrl} alt={convo.user.name} />
                     <AvatarFallback>{convo.user.name.charAt(0)}</AvatarFallback>
@@ -49,67 +79,56 @@ export default function MessagesPage() {
                     </div>
                 </div>
                 </div>
-            ))}
+            )) : <EmptyState />}
             </ScrollArea>
         </div>
 
         {/* Chat Window */}
         <div className="hidden md:flex w-2/3 flex-col">
-            <div className="p-4 border-b flex items-center gap-4">
-            <Avatar className="h-10 w-10">
-                <AvatarImage src={userJane.avatarUrl} alt={userJane.name} />
-                <AvatarFallback>{userJane.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div>
-                <p className="font-semibold">{userJane.name}</p>
-                <p className="text-xs text-muted-foreground">Renting: High-Powered Electric Drill</p>
-            </div>
-            </div>
-            <ScrollArea className="flex-1 p-6 space-y-6">
-                {/* Messages */}
-                <div className="flex justify-center">
-                    <div className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">Today</div>
-                </div>
-                <div className="flex items-end gap-3">
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={userJane.avatarUrl} />
-                        <AvatarFallback>{userJane.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="p-3 bg-muted rounded-lg rounded-bl-none max-w-md">
-                        <p className="text-sm">Hey! Just wanted to confirm I can pick up the drill around 2 PM tomorrow. Does that work for you?</p>
+            {selectedConversation ? (
+                <>
+                    <div className="p-4 border-b flex items-center gap-4">
+                        <Avatar className="h-10 w-10">
+                            <AvatarImage src={selectedConversation.user.avatarUrl} alt={selectedConversation.user.name} />
+                            <AvatarFallback>{selectedConversation.user.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-semibold">{selectedConversation.user.name}</p>
+                            <p className="text-xs text-muted-foreground">Renting: High-Powered Electric Drill</p>
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-end gap-3 justify-end">
-                    <div className="p-3 bg-primary text-primary-foreground rounded-lg rounded-br-none max-w-md">
-                        <p className="text-sm">Yep, 2 PM is perfect. I'll have it ready for you.</p>
+                    <ScrollArea className="flex-1 p-6 space-y-6">
+                        {/* Messages will be populated here */}
+                        <div className="flex justify-center">
+                            <div className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">Today</div>
+                        </div>
+                        <div className="flex items-end gap-3">
+                            <Avatar className="h-8 w-8">
+                                <AvatarImage src={selectedConversation.user.avatarUrl} />
+                                <AvatarFallback>{selectedConversation.user.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="p-3 bg-muted rounded-lg rounded-bl-none max-w-md">
+                                <p className="text-sm">{selectedConversation.lastMessage}</p>
+                            </div>
+                        </div>
+                    </ScrollArea>
+                    <div className="p-4 border-t bg-background">
+                        <div className="relative">
+                            <Input placeholder="Type your message..." className="pr-24 h-12" />
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                                <Button variant="ghost" size="icon">
+                                    <Paperclip className="h-5 w-5 text-muted-foreground" />
+                                </Button>
+                                <Button size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                                    <Send className="h-5 w-5" />
+                                </Button>
+                            </div>
+                        </div>
                     </div>
-                    <Avatar className="h-8 w-8">
-                        {/* Current User Avatar */}
-                    </Avatar>
-                </div>
-                <div className="flex items-end gap-3">
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={userJane.avatarUrl} />
-                        <AvatarFallback>{userJane.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="p-3 bg-muted rounded-lg rounded-bl-none max-w-md">
-                        <p className="text-sm">Sounds good! See you then.</p>
-                    </div>
-                </div>
-            </ScrollArea>
-            <div className="p-4 border-t bg-background">
-            <div className="relative">
-                <Input placeholder="Type your message..." className="pr-24 h-12" />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                    <Button variant="ghost" size="icon">
-                        <Paperclip className="h-5 w-5 text-muted-foreground" />
-                    </Button>
-                    <Button size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                        <Send className="h-5 w-5" />
-                    </Button>
-                </div>
-            </div>
-            </div>
+                </>
+            ) : (
+                <ChatEmptyState />
+            )}
         </div>
         </div>
     </div>

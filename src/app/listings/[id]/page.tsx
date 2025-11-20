@@ -1,11 +1,8 @@
-
 import Image from 'next/image';
-import { items } from '@/lib/placeholder-data';
 import { notFound } from 'next/navigation';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -25,10 +22,15 @@ import { Calendar } from '@/components/ui/calendar';
 import { MapPin, ShieldCheck, Truck, Package } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import type { Item } from '@/lib/types';
 
-export default async function ListingPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const item = items.find((i) => i.id === id);
+
+export default async function ListingPage({ params }: { params: { id: string } }) {
+  const { id } = params;
+  
+  // This is where you would fetch the item from Supabase
+  // const { data: item } = await supabase.from('items').select('*').eq('id', id).single();
+  const item: Item | null = null; // Placeholder for fetched data
 
   if (!item) {
     notFound();

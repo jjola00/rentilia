@@ -1,3 +1,6 @@
+'use client';
+
+import React from 'react';
 import {
   Card,
   CardContent,
@@ -16,50 +19,52 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { items } from '@/lib/placeholder-data';
 import Image from 'next/image';
 import { format } from 'date-fns';
+import type { Item, Booking } from '@/lib/types';
+import { CalendarX2 } from 'lucide-react';
+import Link from 'next/link';
+
+// This will be replaced with data fetched from Supabase
+const bookings: Booking[] = [];
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-12 text-center">
+      <CalendarX2 className="h-12 w-12 text-muted-foreground" />
+      <h3 className="mt-4 text-xl font-semibold">No bookings here</h3>
+      <p className="mt-2 text-sm text-muted-foreground">
+        When you book an item, it will show up here.
+      </p>
+      <Button asChild className="mt-4">
+        <Link href="/browse">Browse Items</Link>
+      </Button>
+    </div>
+  );
+}
 
 export default function MyBookingsPage() {
-  const bookings = [
-    {
-      item: items[1],
-      startDate: new Date('2024-08-10'),
-      endDate: new Date('2024-08-12'),
-      status: 'upcoming',
-      total: 165.0,
-    },
-    {
-      item: items[3],
-      startDate: new Date('2024-07-20'),
-      endDate: new Date('2024-07-21'),
-      status: 'active',
-      total: 45.0,
-    },
-    {
-      item: items[2],
-      startDate: new Date('2024-06-01'),
-      endDate: new Date('2024-06-05'),
-      status: 'completed',
-      total: 550.0,
-    },
-  ];
 
-  const renderTable = (status: string) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Item</TableHead>
-          <TableHead>Dates</TableHead>
-          <TableHead>Total</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {bookings
-          .filter((b) => b.status === status)
-          .map((booking) => (
+  const renderTable = (status: Booking['status']) => {
+    const filteredBookings = bookings.filter((b) => b.status === status);
+    
+    if (filteredBookings.length === 0) {
+      return <EmptyState />;
+    }
+
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Item</TableHead>
+            <TableHead>Dates</TableHead>
+            <TableHead>Total</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredBookings.map((booking) => (
             <TableRow key={booking.item.id}>
               <TableCell>
                 <div className="flex items-center gap-4">
@@ -95,9 +100,10 @@ export default function MyBookingsPage() {
               </TableCell>
             </TableRow>
           ))}
-      </TableBody>
-    </Table>
-  );
+        </TableBody>
+      </Table>
+    );
+  }
 
   return (
     <Card>

@@ -30,3 +30,11 @@ export type Item = {
   imageUrls: string[];
   availability: Date[];
 };
+
+export type Booking = {
+  item: Item;
+  startDate: Date;
+  endDate: Date;
+  status: 'upcoming' | 'active' | 'completed';
+  total: number;
+}

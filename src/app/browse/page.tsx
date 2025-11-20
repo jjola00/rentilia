@@ -19,10 +19,10 @@ import {
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import ItemCard from '@/components/shared/item-card';
-import { items as allItems } from '@/lib/placeholder-data';
 import {
   CalendarIcon,
   SlidersHorizontal,
+  PackageSearch,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import type { Item } from '@/lib/types';
@@ -34,7 +34,8 @@ import type { DateRange } from 'react-day-picker';
 function BrowsePageContent() {
   const searchParams = useSearchParams();
 
-  const [filteredItems, setFilteredItems] = React.useState<Item[]>(allItems);
+  // Data fetching will be implemented here. For now, we use an empty array.
+  const [filteredItems, setFilteredItems] = React.useState<Item[]>([]);
   const [searchTerm, setSearchTerm] = React.useState(searchParams.get('q') || '');
   const [category, setCategory] = React.useState(searchParams.get('category') || 'all');
   const [priceRange, setPriceRange] = React.useState([Number(searchParams.get('price')) || 500]);
@@ -47,34 +48,10 @@ function BrowsePageContent() {
     return undefined;
   });
 
-  const handleFilterChange = () => {
-    let tempItems = allItems;
-
-    // Filter by search term
-    if (searchTerm) {
-      tempItems = tempItems.filter(item =>
-        item.title.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filter by category
-    if (category !== 'all') {
-      tempItems = tempItems.filter(item => item.category === category);
-    }
-    
-    // Filter by price
-    tempItems = tempItems.filter(item => item.dailyRate <= priceRange[0]);
-
-    // Note: Date filtering logic would be more complex and require checking item availability arrays.
-    // For this prototype, we are not filtering by date on the client side.
-
-    setFilteredItems(tempItems);
-  };
-  
-  React.useEffect(() => {
-    handleFilterChange();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, category, priceRange, dateRange]);
+  // This effect will be used for fetching data based on filters.
+  // React.useEffect(() => {
+  //   // Fetch data from Supabase based on searchTerm, category, priceRange, etc.
+  // }, [searchTerm, category, priceRange, dateRange]);
 
 
   return (
@@ -168,7 +145,9 @@ function BrowsePageContent() {
                 <h2 className="text-3xl font-bold font-headline">
                     Search Results
                 </h2>
-                 <p className="text-muted-foreground">{filteredItems.length} items found</p>
+                 <p className="text-muted-foreground">
+                    {filteredItems.length} items found {searchTerm && `for "${searchTerm}"`}
+                 </p>
             </div>
           
           {filteredItems.length > 0 ? (
@@ -178,7 +157,11 @@ function BrowsePageContent() {
               ))}
             </div>
           ) : (
-            <p>No items match your search criteria. Try adjusting your filters.</p>
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-12 text-center">
+                <PackageSearch className="h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-xl font-semibold">No items match your search</h3>
+                <p className="mt-2 text-sm text-muted-foreground">Try adjusting your filters or searching for something else.</p>
+            </div>
           )}
         </main>
       </div>
