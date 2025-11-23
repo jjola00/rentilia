@@ -112,7 +112,7 @@ export default function ProfilePage() {
     setLoading(false);
   };
 
-    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
@@ -170,6 +170,7 @@ export default function ProfilePage() {
 
       if (authError) throw authError;
 
+      // 3. Update local state immediately (no reload needed!)
       setAvatarUrl(publicUrl);
 
       toast({
@@ -177,8 +178,8 @@ export default function ProfilePage() {
         description: 'Profile picture updated successfully',
       });
 
-      // Force a page refresh to update the header avatar
-      window.location.reload();
+      // REMOVE THIS LINE:
+      // window.location.reload();
 
     } catch (error) {
       console.error('Error uploading avatar:', error);
