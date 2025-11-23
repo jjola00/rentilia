@@ -75,8 +75,8 @@
 
 ## Phase 3: Item Listing & Management
 
-- [ ] 5. Build item creation and management system
-- [ ] 5.1 Create multi-step item creation form
+- [x] 5. Build item creation and management system
+- [x] 5.1 Create multi-step item creation form
   - Build src/app/listings/new/page.tsx with step navigation
   - Step 1: Basic info (title, description, category)
   - Step 2: Pricing (price_per_day, replacement_value, deposit_amount)
@@ -85,7 +85,7 @@
   - Implement Zod validation schemas for each step
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 5.2 Implement photo upload to Supabase Storage
+- [x] 5.2 Implement photo upload to Supabase Storage
   - Create PhotoUpload component with drag-and-drop
   - Upload images to Supabase Storage bucket
   - Generate and store public URLs in photo_urls array
@@ -93,7 +93,7 @@
   - Add image preview and delete functionality
   - _Requirements: 4.2_
 
-- [ ] 5.3 Build item listing page for owners
+- [x] 5.3 Build item listing page for owners
   - Create src/app/dashboard/listings/page.tsx
   - Query items table filtered by owner_id
   - Display items in grid with photo, title, price
@@ -101,7 +101,7 @@
   - Show availability toggle switch
   - _Requirements: 4.1, 4.5_
 
-- [ ] 5.4 Create item detail view page
+- [x] 5.4 Create item detail view page
   - Build src/app/listings/[id]/page.tsx
   - Display all item details including photos carousel
   - Show owner profile information
@@ -112,33 +112,33 @@
 
 ## Phase 4: Search & Discovery
 
-- [ ] 6. Implement item search and filtering system
-- [ ] 6.1 Build browse page with item grid
+- [x] 6. Implement item search and filtering system
+- [x] 6.1 Build browse page with item grid
   - Create src/app/browse/page.tsx
   - Query items table where is_available = true
   - Display items in responsive grid layout
   - Implement pagination with range queries
   - _Requirements: 5.1_
 
-- [ ] 6.2 Add category filtering
+- [x] 6.2 Add category filtering
   - Create ItemFilters component with category checkboxes
   - Filter items query by selected categories
   - Update URL params to maintain filter state
   - _Requirements: 5.2_
 
-- [ ] 6.3 Implement location-based filtering
+- [x] 6.3 Implement location-based filtering
   - Add city and state filter dropdowns
   - Query items by owner's city/state from profiles join
   - Show distance or location in item cards
   - _Requirements: 5.3_
 
-- [ ] 6.4 Add price range filtering
+- [x] 6.4 Add price range filtering
   - Create price range slider component
   - Filter items where price_per_day is within range
   - Display min/max price in filter UI
   - _Requirements: 5.4_
 
-- [ ] 6.5 Implement keyword search
+- [x] 6.5 Implement keyword search
   - Add search input with debouncing
   - Search against item title and description using ilike
   - Highlight search terms in results
@@ -148,34 +148,34 @@
 ## Phase 5: Booking System
 
 - [ ] 7. Build booking request and validation system
-- [ ] 7.1 Create booking request form with date picker
+- [x] 7.1 Create booking request form with date picker
   - Build BookingForm component with react-day-picker
   - Implement start_datetime and end_datetime selection
   - Disable dates that conflict with existing bookings
   - Calculate number of rental days
   - _Requirements: 6.1, 6.2_
 
-- [ ] 7.2 Implement rental duration validation
+- [x] 7.2 Implement rental duration validation
   - Validate booking duration against min_rental_days
   - Validate booking duration against max_rental_days
   - Display clear error messages for invalid durations
   - _Requirements: 6.1_
 
-- [ ] 7.3 Add license verification for licensed equipment
+- [x] 7.3 Add license verification for licensed equipment
   - Check if item has is_license_required = true
   - Query licenses table for renter's valid licenses
   - Verify license is_verified = true and expiry_date is future
   - Block booking if license requirements not met
   - _Requirements: 6.4_
 
-- [ ] 7.4 Build booking summary with cost breakdown
+- [x] 7.4 Build booking summary with cost breakdown
   - Calculate total_rental_fee as price_per_day × days
   - Display rental fee and deposit as separate line items
   - Show total amount to be charged
   - Display booking dates and item details
   - _Requirements: 6.2, 6.3_
 
-- [ ] 7.5 Create booking record in database
+- [x] 7.5 Create booking record in database
   - Implement create-booking Edge Function
   - Validate all booking constraints server-side
   - Insert booking with status = 'requested'
@@ -186,7 +186,7 @@
 ## Phase 6: Payment Integration with Stripe
 
 - [ ] 8. Implement Stripe payment processing
-- [ ] 8.1 Create payment intent Edge Function
+- [x] 8.1 Create payment intent Edge Function
   - Build supabase/functions/create-booking-payment/index.ts
   - Create Payment Intent for rental fee (immediate capture)
   - Create separate Payment Intent for deposit (manual capture)
@@ -194,7 +194,7 @@
   - Return client secrets to frontend
   - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 8.2 Build checkout page with Stripe Elements
+- [x] 8.2 Build checkout page with Stripe Elements
   - Create src/app/checkout/[bookingId]/page.tsx
   - Initialize Stripe.js with publishable key
   - Implement CheckoutForm component with CardElement
@@ -202,14 +202,14 @@
   - Handle loading states during payment processing
   - _Requirements: 7.1, 7.3_
 
-- [ ] 8.3 Implement payment confirmation flow
+- [x] 8.3 Implement payment confirmation flow
   - Confirm both payment intents using Stripe.js
   - Handle successful payment confirmation
   - Update booking status to 'paid' on success
   - Redirect to booking confirmation page
   - _Requirements: 7.3, 7.4_
 
-- [ ] 8.4 Add payment error handling and retry
+- [x] 8.4 Add payment error handling and retry
   - Display Stripe error messages to user
   - Implement retry button for failed payments
   - Allow changing payment method
@@ -220,27 +220,27 @@
 ## Phase 7: Webhook Processing
 
 - [ ] 9. Build Stripe webhook handler
-- [ ] 9.1 Create webhook Edge Function
+- [x] 9.1 Create webhook Edge Function
   - Build supabase/functions/stripe-webhook/index.ts
   - Verify webhook signature using Stripe webhook secret
   - Parse webhook event payload
   - Implement idempotency checking to prevent duplicate processing
   - _Requirements: 8.3, 8.4_
 
-- [ ] 9.2 Handle payment_intent.succeeded events
+- [x] 9.2 Handle payment_intent.succeeded events
   - Extract booking_id from payment intent metadata
   - Update booking status from 'requested' to 'paid'
   - Update payment_intent_id in bookings table
   - Send confirmation email to renter and owner
   - _Requirements: 8.1_
 
-- [ ] 9.3 Handle payment_intent.payment_failed events
+- [x] 9.3 Handle payment_intent.payment_failed events
   - Log payment failure details
   - Send failure notification email to renter
   - Keep booking status as 'requested' for retry
   - _Requirements: 8.2_
 
-- [ ] 9.4 Add webhook logging and monitoring
+- [x] 9.4 Add webhook logging and monitoring
   - Log all webhook events with timestamp and type
   - Log processing outcomes (success/failure)
   - Store webhook event IDs for idempotency

@@ -25,7 +25,17 @@ import {
   PackageSearch,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
-import type { Item } from '@/lib/types';
+interface Item {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  price_per_day: number;
+  photo_urls: string[];
+  is_available: boolean;
+  owner_id: string;
+  created_at: string;
+}
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO } from 'date-fns';
@@ -34,11 +44,13 @@ import type { DateRange } from 'react-day-picker';
 function BrowsePageContent() {
   const searchParams = useSearchParams();
 
-  // Data fetching will be implemented here. For now, we use an empty array.
-  const [filteredItems, setFilteredItems] = React.useState<Item[]>([]);
+  const [items, setItems] = React.useState<Item[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState(searchParams.get('q') || '');
   const [category, setCategory] = React.useState(searchParams.get('category') || 'all');
   const [priceRange, setPriceRange] = React.useState([Number(searchParams.get('price')) || 500]);
+  const [city, setCity] = React.useState(searchParams.get('city') || '');
+  const [state, setState] = React.useState(searchParams.get('state') || '');
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(() => {
     const from = searchParams.get('from');
     const to = searchParams.get('to');
@@ -47,11 +59,78 @@ function BrowsePageContent() {
     }
     return undefined;
   });
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 12;
 
-  // This effect will be used for fetching data based on filters.
-  // React.useEffect(() => {
-  //   // Fetch data from Supabase based on searchTerm, category, priceRange, etc.
-  // }, [searchTerm, category, priceRange, dateRange]);
+  React.useEffect(() => {
+    loadItems();
+  }, [category, priceRange, searchTerm, city, state]);
+
+  const loadItems = async () => {
+    setLoading(true);
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+
+      let query = supabase
+        .from('items')
+        .select(`
+          *,
+          profiles!items_owner_id_fkey (
+            city,
+            state
+          )
+        `)
+        .eq('is_available', true)
+        .order('created_at', { ascending: false });
+
+      // Apply category filter
+      if (category && category !== 'all') {
+        query = query.eq('category', category);
+      }
+
+      // Apply price filter
+      if (priceRange && priceRange[0]) {
+        query = query.lte('price_per_day', priceRange[0]);
+      }
+
+      // Apply search filter
+      if (searchTerm) {
+        query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+      }
+
+      // Apply pagination
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+      query = query.range(from, to);
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      // Filter by location on client side (since we need to join with profiles)
+      let filteredData = data || [];
+      if (city) {
+        filteredData = filteredData.filter((item: any) => 
+          item.profiles?.city?.toLowerCase().includes(city.toLowerCase())
+        );
+      }
+      if (state) {
+        filteredData = filteredData.filter((item: any) => 
+          item.profiles?.state?.toLowerCase().includes(state.toLowerCase())
+        );
+      }
+
+      setItems(filteredData);
+    } catch (error) {
+      console.error('Error loading items:', error);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredItems = items;
 
 
   return (
@@ -89,6 +168,30 @@ function BrowsePageContent() {
                   max={500}
                   step={10}
                   onValueChange={setPriceRange}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <input
+                  id="city"
+                  type="text"
+                  placeholder="Enter city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <input
+                  id="state"
+                  type="text"
+                  placeholder="Enter state"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
 
@@ -150,7 +253,11 @@ function BrowsePageContent() {
                  </p>
             </div>
           
-          {filteredItems.length > 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : filteredItems.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredItems.map((item) => (
                 <ItemCard key={item.id} item={item} />

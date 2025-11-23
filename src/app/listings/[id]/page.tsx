@@ -1,11 +1,26 @@
-import Image from 'next/image';
-import { notFound } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  Loader2,
+  MapPin,
+  Calendar,
+  Shield,
+  Truck,
+  DollarSign,
+  User,
+  ArrowLeft,
+} from 'lucide-react';
 import {
   Carousel,
   CarouselContent,
@@ -13,180 +28,307 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import Rating from '@/components/shared/rating';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { MapPin, ShieldCheck, Truck, Package } from 'lucide-react';
-import Link from 'next/link';
-import { format } from 'date-fns';
-import type { Item } from '@/lib/types';
 
+interface ItemDetails {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  price_per_day: number;
+  replacement_value: number;
+  deposit_amount: number;
+  min_rental_days: number;
+  max_rental_days: number;
+  pickup_type: string;
+  is_license_required: boolean;
+  pickup_address: string;
+  photo_urls: string[];
+  is_available: boolean;
+  owner_id: string;
+  created_at: string;
+}
 
-export default async function ListingPage({ params }: { params: { id: string } }) {
-  const { id } = params;
-  
-  // This is where you would fetch the item from Supabase
-  // const { data: item } = await supabase.from('items').select('*').eq('id', id).single();
-  const item: Item | null = null; // Placeholder for fetched data
+interface OwnerProfile {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  city: string | null;
+  state: string | null;
+}
 
-  if (!item) {
-    notFound();
+export default function ItemDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const supabase = createClient();
+
+  const [item, setItem] = useState<ItemDetails | null>(null);
+  const [owner, setOwner] = useState<OwnerProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadItemDetails();
+  }, [params.id]);
+
+  const loadItemDetails = async () => {
+    try {
+      const { data: itemData, error: itemError } = await supabase
+        .from('items')
+        .select('*')
+        .eq('id', params.id)
+        .single();
+
+      if (itemError) throw itemError;
+
+      setItem(itemData);
+
+      const { data: ownerData, error: ownerError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, city, state')
+        .eq('id', itemData.owner_id)
+        .single();
+
+      if (ownerError) throw ownerError;
+
+      setOwner(ownerData);
+    } catch (error) {
+      console.error('Error loading item:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load item details',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestBooking = () => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    router.push(`/bookings/new?itemId=${params.id}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
+  if (!item || !owner) {
+    return (
+      <div className="container max-w-4xl mx-auto py-8 px-4">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <h3 className="text-lg font-semibold mb-2">Item not found</h3>
+            <p className="text-muted-foreground mb-4">
+              This item may have been removed or is no longer available
+            </p>
+            <Button asChild>
+              <Link href="/browse">Browse Items</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const isOwner = user?.id === item.owner_id;
+  const ownerInitial = owner.full_name.charAt(0).toUpperCase();
+
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-12">
-      <div className="grid grid-cols-1 gap-12 md:grid-cols-3">
-        {/* Left column */}
-        <div className="md:col-span-2">
-          <Carousel className="w-full rounded-lg overflow-hidden">
-            <CarouselContent>
-              {item.imageUrls.map((url, index) => (
-                <CarouselItem key={index}>
-                  <div className="relative aspect-video">
-                    <Image
-                      src={url}
-                      alt={`${item.title} image ${index + 1}`}
-                      fill
-                      className="object-cover"
-                      data-ai-hint="rental item"
-                    />
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="left-4" />
-            <CarouselNext className="right-4" />
-          </Carousel>
+    <div className="container max-w-6xl mx-auto py-8 px-4">
+      <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back
+      </Button>
 
-          <div className="mt-8">
-            <Badge variant="secondary">{item.category}</Badge>
-            <h1 className="mt-2 font-headline text-4xl font-bold">
-              {item.title}
-            </h1>
-            <div className="mt-2 flex items-center gap-2 text-muted-foreground">
-              <MapPin className="h-5 w-5" />
-              <span>{item.location}</span>
-            </div>
-            
-            <Separator className="my-6" />
-
-            <h2 className="font-headline text-2xl font-semibold">Description</h2>
-            <p className="mt-4 text-muted-foreground">{item.description}</p>
-            
-            <Separator className="my-6" />
-
-            <div className="flex items-start gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={item.owner.avatarUrl} alt={item.owner.name} />
-                <AvatarFallback>{item.owner.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="text-lg font-semibold">Owned by {item.owner.name}</h3>
-                <p className="text-sm text-muted-foreground">Member since {format(item.owner.memberSince, 'MMMM yyyy')}</p>
-                <Button variant="link" className="p-0 h-auto mt-1" asChild>
-                    <Link href="#">View profile</Link>
-                </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column - Photos and Details */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Photo Carousel */}
+          <Card className="overflow-hidden">
+            {item.photo_urls && item.photo_urls.length > 0 ? (
+              <Carousel className="w-full">
+                <CarouselContent>
+                  {item.photo_urls.map((url, index) => (
+                    <CarouselItem key={index}>
+                      <div className="aspect-video relative">
+                        <img
+                          src={url}
+                          alt={`${item.title} - Photo ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                {item.photo_urls.length > 1 && (
+                  <>
+                    <CarouselPrevious className="left-4" />
+                    <CarouselNext className="right-4" />
+                  </>
+                )}
+              </Carousel>
+            ) : (
+              <div className="aspect-video bg-muted flex items-center justify-center">
+                <p className="text-muted-foreground">No photos available</p>
               </div>
-            </div>
+            )}
+          </Card>
 
-            <Separator className="my-6" />
+          {/* Item Details */}
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div>
+                <div className="flex items-start justify-between mb-2">
+                  <h1 className="text-3xl font-bold">{item.title}</h1>
+                  {!item.is_available && (
+                    <Badge variant="destructive">Unavailable</Badge>
+                  )}
+                </div>
+                <Badge variant="secondary">{item.category}</Badge>
+              </div>
 
-            <h2 className="font-headline text-2xl font-semibold">
-              Reviews ({item.reviewCount})
-            </h2>
-            <div className="mt-4 space-y-6">
-                {item.reviews.slice(0, 2).map(review => (
-                    <div key={review.id} className="flex gap-4">
-                        <Avatar>
-                            <AvatarImage src={review.user.avatarUrl} alt={review.user.name} />
-                            <AvatarFallback>{review.user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <p className="font-semibold">{review.user.name}</p>
-                                <p className="text-xs text-muted-foreground">{format(review.date, 'MMM d, yyyy')}</p>
-                            </div>
-                            <Rating rating={review.rating} size="sm" className="my-1"/>
-                            <p className="text-sm text-muted-foreground">{review.comment}</p>
-                        </div>
+              <Separator />
+
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Description</h2>
+                <p className="text-muted-foreground whitespace-pre-wrap">{item.description}</p>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="font-medium">Rental Period</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.min_rental_days} - {item.max_rental_days} days
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Truck className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="font-medium">Pickup</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.pickup_type === 'renter_pickup' ? 'Renter Pickup' : 'Owner Delivery'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="font-medium">Location</p>
+                    <p className="text-sm text-muted-foreground">
+                      {owner.city && owner.state ? `${owner.city}, ${owner.state}` : 'Location not specified'}
+                    </p>
+                  </div>
+                </div>
+
+                {item.is_license_required && (
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="font-medium">License Required</p>
+                      <p className="text-sm text-muted-foreground">
+                        Valid certification needed
+                      </p>
                     </div>
-                ))}
-            </div>
-            {item.reviewCount > 2 && <Button variant="outline" className="mt-6">Show all {item.reviewCount} reviews</Button>}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-          </div>
+          {/* Owner Info */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-semibold mb-4">Owner</h2>
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={owner.avatar_url || undefined} alt={owner.full_name} />
+                  <AvatarFallback>{ownerInitial}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold">{owner.full_name}</p>
+                  {owner.city && owner.state && (
+                    <p className="text-sm text-muted-foreground">
+                      {owner.city}, {owner.state}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Right column */}
-        <div className="md:col-span-1">
-          <Card className="sticky top-24">
-            <CardHeader>
-              <CardTitle className="text-2xl">
-                <span className="font-bold">${item.dailyRate}</span>
-                <span className="text-base font-normal text-muted-foreground">
-                  /day
-                </span>
-              </CardTitle>
-              <div className="pt-2">
-                <Rating rating={item.rating} reviewCount={item.reviewCount} />
+        {/* Right Column - Pricing and Booking */}
+        <div className="lg:col-span-1">
+          <Card className="sticky top-4">
+            <CardContent className="p-6 space-y-4">
+              <div>
+                <p className="text-3xl font-bold text-primary">
+                  ${item.price_per_day}
+                  <span className="text-lg font-normal text-muted-foreground">/day</span>
+                </p>
               </div>
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    <div>
-                        <p className="mb-2 text-sm font-medium">Select dates</p>
-                        <Calendar
-                            mode="range"
-                            className="rounded-md border"
-                        />
-                    </div>
-                    <Button size="lg" className="w-full h-12 text-lg bg-accent text-accent-foreground hover:bg-accent/90">Request to Book</Button>
-                    <div className="text-center text-sm text-muted-foreground">You won't be charged yet</div>
-                    <Separator/>
-                    <div className="space-y-3 text-sm">
-                        <div className="flex justify-between">
-                            <span>${item.dailyRate} x 0 nights</span>
-                            <span>$0</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>Service fee</span>
-                            <span>$0</span>
-                        </div>
-                    </div>
-                    <Separator/>
-                    <div className="flex justify-between font-bold">
-                        <span>Total</span>
-                        <span>$0</span>
-                    </div>
-                    <div className="text-sm text-muted-foreground p-4 bg-secondary/50 rounded-lg space-y-3">
-                        <div className="flex items-start gap-3">
-                            <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                            <div>
-                                <h4 className="font-semibold">Security Deposit</h4>
-                                <p className="text-xs">A ${item.securityDeposit} hold will be placed on your card and released after the item is returned undamaged.</p>
-                            </div>
-                        </div>
-                    </div>
-                     <div className="space-y-3 text-sm">
-                        <div className="flex items-start gap-3">
-                            <Package className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                            <div>
-                                <h4 className="font-semibold">Pickup available</h4>
-                                <p className="text-xs">Location: {item.location}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                            <Truck className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                            <div>
-                                <h4 className="font-semibold">Delivery available</h4>
-                                <p className="text-xs">Owner may offer delivery. Discuss in messages.</p>
-                            </div>
-                        </div>
-                    </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Security Deposit</span>
+                  <span className="font-medium">${item.deposit_amount}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Replacement Value</span>
+                  <span className="font-medium">${item.replacement_value}</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              {isOwner ? (
+                <div className="space-y-2">
+                  <Button className="w-full" asChild>
+                    <Link href={`/listings/${item.id}/edit`}>Edit Listing</Link>
+                  </Button>
+                  <p className="text-sm text-center text-muted-foreground">
+                    This is your listing
+                  </p>
+                </div>
+              ) : (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleRequestBooking}
+                  disabled={!item.is_available}
+                >
+                  {item.is_available ? 'Request Booking' : 'Currently Unavailable'}
+                </Button>
+              )}
+
+              <div className="pt-4 space-y-2 text-sm text-muted-foreground">
+                <p className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Secure payment processing
+                </p>
+                <p className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Deposit refunded after return
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>

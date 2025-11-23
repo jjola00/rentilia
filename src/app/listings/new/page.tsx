@@ -1,181 +1,481 @@
 'use client';
 
-import React from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { UploadCloud, FileCheck2, ArrowLeft } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import {
+  itemBasicInfoSchema,
+  itemPricingSchema,
+  itemAvailabilitySchema,
+  itemRequirementsSchema,
+  type ItemBasicInfo,
+  type ItemPricing,
+  type ItemAvailability,
+  type ItemRequirements,
+} from '@/lib/validations/item';
+import { PhotoUpload } from '@/components/items/PhotoUpload';
+
+const CATEGORIES = [
+  'Tools & Equipment',
+  'Electronics',
+  'Outdoor & Sports',
+  'Party & Events',
+  'Photography & Video',
+  'Transportation',
+  'Home & Garden',
+  'Other',
+];
+
+type Step = 1 | 2 | 3 | 4 | 5;
 
 export default function NewListingPage() {
-  const [step, setStep] = React.useState(1);
-  const totalSteps = 3;
   const router = useRouter();
-
-  const nextStep = () => setStep((s) => Math.min(s + 1, totalSteps));
-  const prevStep = () => setStep((s) => Math.max(s - 1, 1));
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const supabase = createClient();
   
-  const handleFinish = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In a real app, you'd handle form submission here.
-    // For now, let's redirect to the new listing.
-    router.push('/listings/1');
+  const [currentStep, setCurrentStep] = useState<Step>(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  
+  // Form data storage
+  const [basicInfo, setBasicInfo] = useState<ItemBasicInfo | null>(null);
+  const [pricing, setPricing] = useState<ItemPricing | null>(null);
+  const [availability, setAvailability] = useState<ItemAvailability | null>(null);
+
+  // Step 1: Basic Info
+  const basicInfoForm = useForm<ItemBasicInfo>({
+    resolver: zodResolver(itemBasicInfoSchema),
+    defaultValues: basicInfo || {
+      title: '',
+      description: '',
+      category: '',
+    },
+  });
+
+  // Step 2: Pricing
+  const pricingForm = useForm<ItemPricing>({
+    resolver: zodResolver(itemPricingSchema),
+    defaultValues: pricing || {
+      price_per_day: 0,
+      replacement_value: 0,
+      deposit_amount: 0,
+    },
+  });
+
+  // Step 3: Availability
+  const availabilityForm = useForm<ItemAvailability>({
+    resolver: zodResolver(itemAvailabilitySchema),
+    defaultValues: availability || {
+      min_rental_days: 1,
+      max_rental_days: 7,
+      pickup_type: 'renter_pickup',
+    },
+  });
+
+  // Step 4: Requirements
+  const requirementsForm = useForm<ItemRequirements>({
+    resolver: zodResolver(itemRequirementsSchema),
+    defaultValues: {
+      is_license_required: false,
+      pickup_address: '',
+    },
+  });
+
+  const handleStep1Submit = (data: ItemBasicInfo) => {
+    setBasicInfo(data);
+    setCurrentStep(2);
+  };
+
+  const handleStep2Submit = (data: ItemPricing) => {
+    setPricing(data);
+    setCurrentStep(3);
+  };
+
+  const handleStep3Submit = (data: ItemAvailability) => {
+    setAvailability(data);
+    setCurrentStep(4);
+  };
+
+  const handleStep4Continue = () => {
+    if (photoUrls.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Photos required',
+        description: 'Please upload at least one photo of your item',
+      });
+      return;
+    }
+    setCurrentStep(5);
+  };
+
+  const handleFinalSubmit = async (data: ItemRequirements) => {
+    if (!user || !basicInfo || !pricing || !availability) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please complete all steps',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { data: item, error } = await supabase
+        .from('items')
+        .insert({
+          owner_id: user.id,
+          title: basicInfo.title,
+          description: basicInfo.description,
+          category: basicInfo.category,
+          price_per_day: pricing.price_per_day,
+          replacement_value: pricing.replacement_value,
+          deposit_amount: pricing.deposit_amount,
+          min_rental_days: availability.min_rental_days,
+          max_rental_days: availability.max_rental_days,
+          pickup_type: availability.pickup_type,
+          is_license_required: data.is_license_required,
+          pickup_address: data.pickup_address,
+          photo_urls: photoUrls,
+          is_available: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success!',
+        description: 'Your item has been listed',
+      });
+
+      router.push('/dashboard/listings');
+    } catch (error) {
+      console.error('Error creating item:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to create listing. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const goBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep((currentStep - 1) as Step);
+    }
   };
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-12">
-      <Card>
-        <CardHeader>
-          {step > 1 && (
-            <Button variant="ghost" size="sm" className="absolute left-4 top-4" onClick={prevStep}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-          )}
-          <div className="flex flex-col items-center text-center">
-            <CardTitle className="text-3xl font-headline">List an Item</CardTitle>
-            <CardDescription className="mt-2">
-              Follow the steps to get your item listed on Rentilia.
-            </CardDescription>
-            <Progress value={(step / totalSteps) * 100} className="mt-4 w-1/2" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleFinish}>
-            {step === 1 && (
-              <div className="space-y-6">
+    <div className="container max-w-2xl mx-auto py-8 px-4">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">List a New Item</h1>
+        <p className="text-muted-foreground">
+          Step {currentStep} of 5: {
+            currentStep === 1 ? 'Basic Information' :
+            currentStep === 2 ? 'Pricing' :
+            currentStep === 3 ? 'Availability' :
+            currentStep === 4 ? 'Photos' :
+            'Requirements'
+          }
+        </p>
+      </div>
+
+      {/* Step 1: Basic Info */}
+      {currentStep === 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+            <CardDescription>Tell us about your item</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={basicInfoForm.handleSubmit(handleStep1Submit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  placeholder="e.g., Professional DSLR Camera"
+                  {...basicInfoForm.register('title')}
+                />
+                {basicInfoForm.formState.errors.title && (
+                  <p className="text-sm text-destructive">{basicInfoForm.formState.errors.title.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe your item, its condition, and what makes it special..."
+                  rows={5}
+                  {...basicInfoForm.register('description')}
+                />
+                {basicInfoForm.formState.errors.description && (
+                  <p className="text-sm text-destructive">{basicInfoForm.formState.errors.description.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  onValueChange={(value) => basicInfoForm.setValue('category', value)}
+                  defaultValue={basicInfoForm.getValues('category')}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {basicInfoForm.formState.errors.category && (
+                  <p className="text-sm text-destructive">{basicInfoForm.formState.errors.category.message}</p>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit">
+                  Next <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 2: Pricing */}
+      {currentStep === 2 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pricing</CardTitle>
+            <CardDescription>Set your rental rates and deposit</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={pricingForm.handleSubmit(handleStep2Submit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="price_per_day">Price Per Day ($)</Label>
+                <Input
+                  id="price_per_day"
+                  type="number"
+                  step="0.01"
+                  placeholder="25.00"
+                  {...pricingForm.register('price_per_day', { valueAsNumber: true })}
+                />
+                {pricingForm.formState.errors.price_per_day && (
+                  <p className="text-sm text-destructive">{pricingForm.formState.errors.price_per_day.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="replacement_value">Replacement Value ($)</Label>
+                <Input
+                  id="replacement_value"
+                  type="number"
+                  step="0.01"
+                  placeholder="500.00"
+                  {...pricingForm.register('replacement_value', { valueAsNumber: true })}
+                />
+                <p className="text-sm text-muted-foreground">
+                  The cost to replace this item if lost or damaged beyond repair
+                </p>
+                {pricingForm.formState.errors.replacement_value && (
+                  <p className="text-sm text-destructive">{pricingForm.formState.errors.replacement_value.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="deposit_amount">Security Deposit ($)</Label>
+                <Input
+                  id="deposit_amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="100.00"
+                  {...pricingForm.register('deposit_amount', { valueAsNumber: true })}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Refundable deposit held during rental (typically 20-50% of replacement value)
+                </p>
+                {pricingForm.formState.errors.deposit_amount && (
+                  <p className="text-sm text-destructive">{pricingForm.formState.errors.deposit_amount.message}</p>
+                )}
+              </div>
+
+              <div className="flex justify-between">
+                <Button type="button" variant="outline" onClick={goBack}>
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                </Button>
+                <Button type="submit">
+                  Next <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 3: Availability */}
+      {currentStep === 3 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Availability</CardTitle>
+            <CardDescription>Set rental duration and pickup options</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={availabilityForm.handleSubmit(handleStep3Submit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-lg font-medium">Item Title</Label>
-                  <Input id="title" placeholder="e.g., Professional DSLR Camera" required />
-                  <p className="text-sm text-muted-foreground">
-                    A catchy and descriptive title will help renters find your item.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category" className="text-lg font-medium">Category</Label>
-                  <Select required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="tools">Tools & Equipment</SelectItem>
-                      <SelectItem value="party">Party & Events</SelectItem>
-                      <SelectItem value="electronics">Electronics</SelectItem>
-                      <SelectItem value="sports">Sports & Outdoors</SelectItem>
-                      <SelectItem value="vehicles">Vehicles</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-lg font-medium">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe your item in detail. Include its condition, what's included, and any special instructions."
-                    rows={6}
-                    required
+                  <Label htmlFor="min_rental_days">Minimum Rental (days)</Label>
+                  <Input
+                    id="min_rental_days"
+                    type="number"
+                    {...availabilityForm.register('min_rental_days', { valueAsNumber: true })}
                   />
+                  {availabilityForm.formState.errors.min_rental_days && (
+                    <p className="text-sm text-destructive">{availabilityForm.formState.errors.min_rental_days.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="max_rental_days">Maximum Rental (days)</Label>
+                  <Input
+                    id="max_rental_days"
+                    type="number"
+                    {...availabilityForm.register('max_rental_days', { valueAsNumber: true })}
+                  />
+                  {availabilityForm.formState.errors.max_rental_days && (
+                    <p className="text-sm text-destructive">{availabilityForm.formState.errors.max_rental_days.message}</p>
+                  )}
                 </div>
               </div>
-            )}
-            {step === 2 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="dailyRate" className="text-lg font-medium">Daily Rental Rate</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input id="dailyRate" type="number" placeholder="50.00" className="pl-7" required />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="securityDeposit" className="text-lg font-medium">Security Deposit</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input id="securityDeposit" type="number" placeholder="200.00" className="pl-7" required />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    This is a hold placed on the renter's card, released after the item is returned safely.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                    <Label className="text-lg font-medium">Pickup & Delivery</Label>
-                     <RadioGroup defaultValue="pickup" className="flex gap-4 pt-2">
-                        <Label htmlFor="r1" className="flex items-center gap-2 p-4 border rounded-md cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
-                            <RadioGroupItem value="pickup" id="r1" />
-                            Pickup Only
-                        </Label>
-                         <Label htmlFor="r2" className="flex items-center gap-2 p-4 border rounded-md cursor-pointer has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
-                            <RadioGroupItem value="both" id="r2" />
-                            Pickup & Delivery
-                        </Label>
-                    </RadioGroup>
-                </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pickup_type">Pickup Type</Label>
+                <Select
+                  onValueChange={(value) => availabilityForm.setValue('pickup_type', value as 'renter_pickup' | 'owner_delivery')}
+                  defaultValue={availabilityForm.getValues('pickup_type')}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select pickup type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="renter_pickup">Renter Pickup</SelectItem>
+                    <SelectItem value="owner_delivery">Owner Delivery</SelectItem>
+                  </SelectContent>
+                </Select>
+                {availabilityForm.formState.errors.pickup_type && (
+                  <p className="text-sm text-destructive">{availabilityForm.formState.errors.pickup_type.message}</p>
+                )}
               </div>
-            )}
-            {step === 3 && (
-              <div className="space-y-6">
-                <div>
-                  <Label className="text-lg font-medium">Upload Photos</Label>
-                  <div className="mt-2 flex justify-center rounded-lg border-2 border-dashed border-border px-6 py-10">
-                    <div className="text-center">
-                      <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" />
-                      <div className="mt-4 flex text-sm leading-6 text-muted-foreground">
-                        <Label
-                          htmlFor="file-upload"
-                          className="relative cursor-pointer rounded-md font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 hover:text-primary/80"
-                        >
-                          <span>Upload files</span>
-                          <Input id="file-upload" name="file-upload" type="file" className="sr-only" multiple />
-                        </Label>
-                        <p className="pl-1">or drag and drop</p>
-                      </div>
-                      <p className="text-xs leading-5">PNG, JPG, GIF up to 10MB</p>
-                    </div>
-                  </div>
-                </div>
-                 <div className="space-y-2">
-                  <Label className="text-lg font-medium">License Requirement</Label>
-                   <p className="text-sm text-muted-foreground pb-2">
-                    Does this item require a special license or certification to operate? (e.g., driver's license, chainsaw certification)
-                  </p>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="license-required" />
-                    <Label htmlFor="license-required">Yes, a license is required.</Label>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div className="mt-8 flex justify-end">
-              {step < totalSteps ? (
-                <Button type="button" onClick={nextStep}>
-                  Next Step
+
+              <div className="flex justify-between">
+                <Button type="button" variant="outline" onClick={goBack}>
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
                 </Button>
-              ) : (
-                <Button type="submit" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                  <FileCheck2 className="mr-2 h-4 w-4" />
-                  Finish & List Item
+                <Button type="submit">
+                  Next <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-              )}
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 4: Photos */}
+      {currentStep === 4 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Photos</CardTitle>
+            <CardDescription>Upload photos of your item (at least 1 required)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <PhotoUpload
+              photoUrls={photoUrls}
+              onPhotosChange={setPhotoUrls}
+              maxPhotos={10}
+            />
+
+            <div className="flex justify-between">
+              <Button type="button" variant="outline" onClick={goBack}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+              <Button type="button" onClick={handleStep4Continue}>
+                Next <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 5: Requirements */}
+      {currentStep === 5 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Requirements</CardTitle>
+            <CardDescription>Final details and requirements</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={requirementsForm.handleSubmit(handleFinalSubmit)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="pickup_address">Pickup Address</Label>
+                <Textarea
+                  id="pickup_address"
+                  placeholder="123 Main St, City, State 12345"
+                  rows={3}
+                  {...requirementsForm.register('pickup_address')}
+                />
+                {requirementsForm.formState.errors.pickup_address && (
+                  <p className="text-sm text-destructive">{requirementsForm.formState.errors.pickup_address.message}</p>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_license_required"
+                  onCheckedChange={(checked) => requirementsForm.setValue('is_license_required', checked as boolean)}
+                />
+                <Label htmlFor="is_license_required" className="text-sm font-normal cursor-pointer">
+                  Require valid license or certification to rent this item
+                </Label>
+              </div>
+
+              <div className="flex justify-between">
+                <Button type="button" variant="outline" onClick={goBack}>
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Listing'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

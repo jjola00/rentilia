@@ -13,9 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UploadCloud } from 'lucide-react';
+import { UploadCloud, Loader2, X, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,8 +28,13 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
-  const [state, setState] = useState('');
   const [bio, setBio] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingLicense, setUploadingLicense] = useState(false);
+  const [licenseUrl, setLicenseUrl] = useState('');
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const licenseInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -50,8 +55,28 @@ export default function ProfilePage() {
       setFullName(data.full_name || '');
       setPhone(data.phone || '');
       setCity(data.city || '');
-      setState(data.state || '');
       setBio(data.bio || '');
+      setAvatarUrl(data.avatar_url || '');
+    }
+
+    // Load license if exists - Fixed query
+    const { data: licenseData } = await supabase
+      .from('licenses')
+      .select('document_url')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(); // Use maybeSingle() instead of single() to handle no results
+
+    if (licenseData && licenseData.document_url) {
+      // Create a signed URL for the stored path
+      const { data: urlData } = await supabase.storage
+        .from('licenses')
+        .createSignedUrl(licenseData.document_url, 60 * 60 * 24); // 24 hour expiry
+      
+      if (urlData) {
+        setLicenseUrl(urlData.signedUrl);
+      }
     }
   };
 
@@ -66,8 +91,8 @@ export default function ProfilePage() {
         full_name: fullName,
         phone,
         city,
-        state,
         bio,
+        avatar_url: avatarUrl,
       })
       .eq('id', user.id);
 
@@ -85,6 +110,182 @@ export default function ProfilePage() {
     }
 
     setLoading(false);
+  };
+
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid file',
+        description: 'Please upload an image file',
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: 'File must be less than 5MB',
+      });
+      return;
+    }
+
+    setUploadingAvatar(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const publicUrl = data.publicUrl;
+
+      // Update BOTH places:
+      
+      // 1. Update the profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      // 2. Update the auth user metadata
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+
+      if (authError) throw authError;
+
+      setAvatarUrl(publicUrl);
+
+      toast({
+        title: 'Success',
+        description: 'Profile picture updated successfully',
+      });
+
+      // Force a page refresh to update the header avatar
+      window.location.reload();
+
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Upload failed',
+        description: 'Failed to upload profile picture',
+      });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleLicenseUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type (images and PDFs)
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid file',
+        description: 'Please upload an image (JPG, PNG, WebP) or PDF file',
+      });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: 'File must be less than 10MB',
+      });
+      return;
+    }
+
+    setUploadingLicense(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('licenses')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // For private bucket, we'll store the path and create signed URLs when needed
+      const { data: urlData, error: urlError } = await supabase.storage
+        .from('licenses')
+        .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year expiry
+
+      if (urlError) throw urlError;
+
+      setLicenseUrl(urlData.signedUrl);
+
+      // Check if license already exists
+      const { data: existingLicense } = await supabase
+        .from('licenses')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (existingLicense) {
+        // Update existing license
+        const { error: licenseError } = await supabase
+          .from('licenses')
+          .update({
+            document_url: filePath,
+            license_type: 'drivers_license',
+            is_verified: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id);
+
+        if (licenseError) throw licenseError;
+      } else {
+        // Insert new license
+        const { error: licenseError } = await supabase
+          .from('licenses')
+          .insert({
+            user_id: user.id,
+            document_url: filePath,
+            license_type: 'drivers_license',
+            is_verified: false,
+          });
+
+        if (licenseError) throw licenseError;
+      }
+
+      toast({
+        title: 'Success',
+        description: 'License uploaded successfully. Awaiting verification.',
+      });
+    } catch (error) {
+      console.error('Error uploading license:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Upload failed',
+        description: 'Failed to upload license',
+      });
+    } finally {
+      setUploadingLicense(false);
+    }
   };
 
   const userName = user?.user_metadata?.full_name || user?.email || 'User';
@@ -129,28 +330,15 @@ export default function ProfilePage() {
                 placeholder="(555) 123-4567"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input 
-                  id="city" 
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  disabled={loading}
-                  placeholder="San Francisco"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="state">State</Label>
-                <Input 
-                  id="state" 
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  disabled={loading}
-                  placeholder="CA"
-                  maxLength={2}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Input 
+                id="city" 
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                disabled={loading}
+                placeholder="San Francisco"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="bio">Bio</Label>
@@ -179,10 +367,31 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             <Avatar className="h-32 w-32">
-              <AvatarImage src={user?.user_metadata?.avatar_url} alt={userName} />
+              <AvatarImage src={avatarUrl || user?.user_metadata?.avatar_url} alt={userName} />
               <AvatarFallback>{userInitial}</AvatarFallback>
             </Avatar>
-            <Button variant="outline" disabled>Change Picture (Coming Soon)</Button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarUpload}
+              className="hidden"
+            />
+            <Button 
+              variant="outline" 
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={uploadingAvatar}
+            >
+              {uploadingAvatar ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                'Change Picture'
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground">Max 5MB, JPG, PNG or WebP</p>
           </CardContent>
         </Card>
 
@@ -194,21 +403,63 @@ export default function ProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-             <div className="flex justify-center rounded-lg border-2 border-dashed border-border px-6 py-10">
-                <div className="text-center">
-                    <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <div className="mt-4 flex text-sm leading-6 text-muted-foreground">
-                    <Label
-                        htmlFor="license-upload"
-                        className="relative cursor-pointer rounded-md font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 hover:text-primary/80"
+            {licenseUrl ? (
+              <div className="space-y-4">
+                <div className="relative rounded-lg border-2 border-border overflow-hidden">
+                  <img 
+                    src={licenseUrl} 
+                    alt="License document" 
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="absolute top-2 right-2">
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      onClick={() => setLicenseUrl('')}
                     >
-                        <span>Upload your license</span>
-                        <Input id="license-upload" name="license-upload" type="file" className="sr-only" />
-                    </Label>
-                    </div>
-                    <p className="text-xs leading-5">Secure and encrypted</p>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-            </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle className="h-4 w-4 text-yellow-500" />
+                  <span>Awaiting verification</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-center rounded-lg border-2 border-dashed border-border px-6 py-10">
+                <div className="text-center">
+                  {uploadingLicense ? (
+                    <>
+                      <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
+                      <p className="mt-4 text-sm text-muted-foreground">Uploading...</p>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" />
+                      <div className="mt-4 flex text-sm leading-6 text-muted-foreground">
+                        <Label
+                          htmlFor="license-upload"
+                          className="relative cursor-pointer rounded-md font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 hover:text-primary/80"
+                        >
+                          <span>Upload your license</span>
+                          <Input 
+                            ref={licenseInputRef}
+                            id="license-upload" 
+                            name="license-upload" 
+                            type="file" 
+                            accept="image/*,.pdf"
+                            onChange={handleLicenseUpload}
+                            className="sr-only" 
+                          />
+                        </Label>
+                      </div>
+                      <p className="text-xs leading-5">Max 10MB, Images or PDF</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
