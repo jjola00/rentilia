@@ -28,6 +28,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import { useProfile } from '@/hooks/use-profile';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 export default function DashboardLayout({
@@ -38,6 +39,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { displayName, userInitial, avatarUrl } = useProfile();
   
   const navItems = [
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -51,9 +53,6 @@ export default function DashboardLayout({
     await signOut();
     router.push('/');
   };
-
-  const userName = user?.user_metadata?.full_name || user?.email || 'User';
-  const userInitial = userName.charAt(0).toUpperCase();
 
 
   return (
@@ -89,11 +88,11 @@ export default function DashboardLayout({
           <SidebarFooter className='border-t'>
             <div className="flex items-center gap-3 p-2">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={user?.user_metadata?.avatar_url} alt={userName} />
+                <AvatarImage src={avatarUrl} alt={displayName} />
                 <AvatarFallback>{userInitial}</AvatarFallback>
               </Avatar>
               <div className="overflow-hidden group-data-[collapsible=icon]:hidden">
-                <p className="font-semibold truncate">{userName}</p>
+                <p className="font-semibold truncate">{displayName}</p>
                  <button onClick={handleLogout} className="text-xs text-muted-foreground truncate hover:underline">Logout</button>
               </div>
               <Button variant="ghost" size="icon" className="group-data-[collapsible=icon]:hidden ml-auto" onClick={handleLogout}>

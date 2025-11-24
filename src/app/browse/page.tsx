@@ -2,6 +2,7 @@
 
 import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { CATEGORIES } from '@/lib/constants/categories';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -44,13 +45,13 @@ import type { DateRange } from 'react-day-picker';
 function BrowsePageContent() {
   const searchParams = useSearchParams();
 
+  const { user } = require('@/lib/auth/AuthProvider').useAuth();
   const [items, setItems] = React.useState<Item[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState(searchParams.get('q') || '');
   const [category, setCategory] = React.useState(searchParams.get('category') || 'all');
   const [priceRange, setPriceRange] = React.useState([Number(searchParams.get('price')) || 500]);
   const [city, setCity] = React.useState(searchParams.get('city') || '');
-  const [state, setState] = React.useState(searchParams.get('state') || '');
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(() => {
     const from = searchParams.get('from');
     const to = searchParams.get('to');
@@ -64,7 +65,7 @@ function BrowsePageContent() {
 
   React.useEffect(() => {
     loadItems();
-  }, [category, priceRange, searchTerm, city, state]);
+  }, [category, priceRange, searchTerm, city]);
 
   const loadItems = async () => {
     setLoading(true);
@@ -72,25 +73,25 @@ function BrowsePageContent() {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
 
+
       let query = supabase
         .from('items')
-        .select(`
-          *,
-          profiles!items_owner_id_fkey (
-            city,
-            state
-          )
-        `)
+        .select(`*, profiles(city)`)
         .eq('is_available', true)
         .order('created_at', { ascending: false });
+
+      // Exclude user's own listings
+      if (user) {
+        query = query.neq('owner_id', user.id);
+      }
 
       // Apply category filter
       if (category && category !== 'all') {
         query = query.eq('category', category);
       }
 
-      // Apply price filter
-      if (priceRange && priceRange[0]) {
+      // Apply price filter (only if greater than 0)
+      if (priceRange && priceRange[0] > 0) {
         query = query.lte('price_per_day', priceRange[0]);
       }
 
@@ -113,11 +114,6 @@ function BrowsePageContent() {
       if (city) {
         filteredData = filteredData.filter((item: any) => 
           item.profiles?.city?.toLowerCase().includes(city.toLowerCase())
-        );
-      }
-      if (state) {
-        filteredData = filteredData.filter((item: any) => 
-          item.profiles?.state?.toLowerCase().includes(state.toLowerCase())
         );
       }
 
@@ -152,23 +148,23 @@ function BrowsePageContent() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="Tools & Equipment">Tools & Equipment</SelectItem>
-                    <SelectItem value="Party & Events">Party & Events</SelectItem>
-                    <SelectItem value="Electronics">Electronics</SelectItem>
-                    <SelectItem value="Sports & Outdoors">Sports & Outdoors</SelectItem>
-                    <SelectItem value="Vehicles">Vehicles</SelectItem>
+                    {CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label>Max Daily Rate: ${priceRange[0]}</Label>
+                <Label>Max Daily Rate: {priceRange[0] >= 500 ? 'Any' : `$${priceRange[0]}`}</Label>
                 <Slider
                   value={priceRange}
+                  min={0}
                   max={500}
                   step={10}
                   onValueChange={setPriceRange}
                 />
+                <p className="text-xs text-muted-foreground">Set to max to see all items</p>
               </div>
 
               <div className="space-y-2">
@@ -183,17 +179,7 @@ function BrowsePageContent() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="state">State</Label>
-                <input
-                  id="state"
-                  type="text"
-                  placeholder="Enter state"
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
+
 
               <div className="space-y-2">
                 <Label>Availability</Label>

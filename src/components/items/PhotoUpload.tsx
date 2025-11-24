@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useAuth } from '@/lib/auth/AuthProvider';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -14,6 +15,7 @@ interface PhotoUploadProps {
 }
 
 export function PhotoUpload({ photoUrls, onPhotosChange, maxPhotos = 10 }: PhotoUploadProps) {
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -22,12 +24,14 @@ export function PhotoUpload({ photoUrls, onPhotosChange, maxPhotos = 10 }: Photo
 
   const uploadPhoto = async (file: File): Promise<string | null> => {
     try {
+      if (!user) throw new Error('User not authenticated');
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-      const filePath = `item-photos/${fileName}`;
+      const filePath = `${user.id}/${fileName}`; // use user.id as folder
+
 
       const { error: uploadError } = await supabase.storage
-        .from('items')
+        .from('item-photos')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false,
@@ -35,8 +39,9 @@ export function PhotoUpload({ photoUrls, onPhotosChange, maxPhotos = 10 }: Photo
 
       if (uploadError) throw uploadError;
 
+
       const { data: { publicUrl } } = supabase.storage
-        .from('items')
+        .from('item-photos')
         .getPublicUrl(filePath);
 
       return publicUrl;
@@ -123,7 +128,7 @@ export function PhotoUpload({ photoUrls, onPhotosChange, maxPhotos = 10 }: Photo
       const urlParts = url.split('/');
       const filePath = `item-photos/${urlParts[urlParts.length - 1]}`;
 
-      await supabase.storage.from('items').remove([filePath]);
+  await supabase.storage.from('item-photos').remove([filePath]);
 
       onPhotosChange(photoUrls.filter((u) => u !== url));
 

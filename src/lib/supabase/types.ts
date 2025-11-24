@@ -35,7 +35,6 @@ export interface Database {
           bio: string | null
           avatar_url: string | null
           city: string | null
-          state: string | null
           stripe_account_id: string | null
           terms_accepted: boolean
           accepted_terms_version: number | null
@@ -51,7 +50,6 @@ export interface Database {
           bio?: string | null
           avatar_url?: string | null
           city?: string | null
-          state?: string | null
           stripe_account_id?: string | null
           terms_accepted?: boolean
           accepted_terms_version?: number | null
@@ -67,7 +65,6 @@ export interface Database {
           bio?: string | null
           avatar_url?: string | null
           city?: string | null
-          state?: string | null
           stripe_account_id?: string | null
           terms_accepted?: boolean
           accepted_terms_version?: number | null

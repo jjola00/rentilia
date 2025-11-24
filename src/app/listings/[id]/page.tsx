@@ -5,11 +5,22 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import { CATEGORIES } from '@/lib/constants/categories';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import {
   Loader2,
@@ -18,8 +29,10 @@ import {
   Shield,
   Truck,
   DollarSign,
-  User,
   ArrowLeft,
+  Edit,
+  Save,
+  X,
 } from 'lucide-react';
 import {
   Carousel,
@@ -53,7 +66,6 @@ interface OwnerProfile {
   full_name: string;
   avatar_url: string | null;
   city: string | null;
-  state: string | null;
 }
 
 export default function ItemDetailPage() {
@@ -66,6 +78,9 @@ export default function ItemDetailPage() {
   const [item, setItem] = useState<ItemDetails | null>(null);
   const [owner, setOwner] = useState<OwnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<ItemDetails>>({});
 
   useEffect(() => {
     loadItemDetails();
@@ -85,7 +100,7 @@ export default function ItemDetailPage() {
 
       const { data: ownerData, error: ownerError } = await supabase
         .from('profiles')
-        .select('id, full_name, avatar_url, city, state')
+        .select('id, full_name, avatar_url, city')
         .eq('id', itemData.owner_id)
         .single();
 
@@ -111,6 +126,58 @@ export default function ItemDetailPage() {
     }
 
     router.push(`/bookings/new?itemId=${params.id}`);
+  };
+
+  const startEditing = () => {
+    if (item) {
+      setEditForm({
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        price_per_day: item.price_per_day,
+        replacement_value: item.replacement_value,
+        deposit_amount: item.deposit_amount,
+        min_rental_days: item.min_rental_days,
+        max_rental_days: item.max_rental_days,
+        pickup_address: item.pickup_address,
+      });
+      setIsEditing(true);
+    }
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditForm({});
+  };
+
+  const saveChanges = async () => {
+    if (!item) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('items')
+        .update(editForm)
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      setItem({ ...item, ...editForm } as ItemDetails);
+      setIsEditing(false);
+      toast({
+        title: 'Success',
+        description: 'Listing updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating item:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update listing',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -186,68 +253,158 @@ export default function ItemDetailPage() {
           {/* Item Details */}
           <Card>
             <CardContent className="p-6 space-y-4">
-              <div>
-                <div className="flex items-start justify-between mb-2">
-                  <h1 className="text-3xl font-bold">{item.title}</h1>
-                  {!item.is_available && (
-                    <Badge variant="destructive">Unavailable</Badge>
-                  )}
-                </div>
-                <Badge variant="secondary">{item.category}</Badge>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h2 className="text-lg font-semibold mb-2">Description</h2>
-                <p className="text-muted-foreground whitespace-pre-wrap">{item.description}</p>
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="font-medium">Rental Period</p>
-                    <p className="text-sm text-muted-foreground">
-                      {item.min_rental_days} - {item.max_rental_days} days
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <Truck className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="font-medium">Pickup</p>
-                    <p className="text-sm text-muted-foreground">
-                      {item.pickup_type === 'renter_pickup' ? 'Renter Pickup' : 'Owner Delivery'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="font-medium">Location</p>
-                    <p className="text-sm text-muted-foreground">
-                      {owner.city && owner.state ? `${owner.city}, ${owner.state}` : 'Location not specified'}
-                    </p>
-                  </div>
-                </div>
-
-                {item.is_license_required && (
-                  <div className="flex items-start gap-3">
-                    <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
+              {isEditing ? (
+                <>
+                  <div className="space-y-4">
                     <div>
-                      <p className="font-medium">License Required</p>
-                      <p className="text-sm text-muted-foreground">
-                        Valid certification needed
-                      </p>
+                      <Label htmlFor="title">Title</Label>
+                      <Input
+                        id="title"
+                        value={editForm.title || ''}
+                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="category">Category</Label>
+                      <Select
+                        value={editForm.category || ''}
+                        onValueChange={(value) => setEditForm({ ...editForm, category: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CATEGORIES.map((cat) => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        rows={5}
+                        value={editForm.description || ''}
+                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="min_rental_days">Min Rental Days</Label>
+                        <Input
+                          id="min_rental_days"
+                          type="number"
+                          value={editForm.min_rental_days || ''}
+                          onChange={(e) => setEditForm({ ...editForm, min_rental_days: Number(e.target.value) })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="max_rental_days">Max Rental Days</Label>
+                        <Input
+                          id="max_rental_days"
+                          type="number"
+                          value={editForm.max_rental_days || ''}
+                          onChange={(e) => setEditForm({ ...editForm, max_rental_days: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="pickup_address">Pickup Address</Label>
+                      <Textarea
+                        id="pickup_address"
+                        rows={2}
+                        value={editForm.pickup_address || ''}
+                        onChange={(e) => setEditForm({ ...editForm, pickup_address: e.target.value })}
+                      />
                     </div>
                   </div>
-                )}
-              </div>
+                  <div className="flex gap-2 pt-4">
+                    <Button onClick={saveChanges} disabled={saving}>
+                      {saving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                    <Button variant="outline" onClick={cancelEditing} disabled={saving}>
+                      <X className="mr-2 h-4 w-4" />
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="flex items-start justify-between mb-2">
+                      <h1 className="text-3xl font-bold">{item.title}</h1>
+                      {!item.is_available && (
+                        <Badge variant="destructive">Unavailable</Badge>
+                      )}
+                    </div>
+                    <Badge variant="secondary">{item.category}</Badge>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <h2 className="text-lg font-semibold mb-2">Description</h2>
+                    <p className="text-muted-foreground whitespace-pre-wrap">{item.description}</p>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-start gap-3">
+                      <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="font-medium">Rental Period</p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.min_rental_days} - {item.max_rental_days} days
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <Truck className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="font-medium">Pickup</p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.pickup_type === 'renter_pickup' ? 'Renter Pickup' : 'Owner Delivery'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="font-medium">Location</p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.pickup_address || 'Location not specified'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {item.is_license_required && (
+                      <div className="flex items-start gap-3">
+                        <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="font-medium">License Required</p>
+                          <p className="text-sm text-muted-foreground">
+                            Valid certification needed
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -262,9 +419,9 @@ export default function ItemDetailPage() {
                 </Avatar>
                 <div>
                   <p className="font-semibold">{owner.full_name}</p>
-                  {owner.city && owner.state && (
+                  {owner.city && (
                     <p className="text-sm text-muted-foreground">
-                      {owner.city}, {owner.state}
+                      {owner.city}
                     </p>
                   )}
                 </div>
@@ -277,58 +434,95 @@ export default function ItemDetailPage() {
         <div className="lg:col-span-1">
           <Card className="sticky top-4">
             <CardContent className="p-6 space-y-4">
-              <div>
-                <p className="text-3xl font-bold text-primary">
-                  ${item.price_per_day}
-                  <span className="text-lg font-normal text-muted-foreground">/day</span>
-                </p>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Security Deposit</span>
-                  <span className="font-medium">${item.deposit_amount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Replacement Value</span>
-                  <span className="font-medium">${item.replacement_value}</span>
-                </div>
-              </div>
-
-              <Separator />
-
-              {isOwner ? (
-                <div className="space-y-2">
-                  <Button className="w-full" asChild>
-                    <Link href={`/listings/${item.id}/edit`}>Edit Listing</Link>
-                  </Button>
-                  <p className="text-sm text-center text-muted-foreground">
-                    This is your listing
-                  </p>
-                </div>
+              {isEditing ? (
+                <>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="price_per_day">Price per Day ($)</Label>
+                      <Input
+                        id="price_per_day"
+                        type="number"
+                        value={editForm.price_per_day || ''}
+                        onChange={(e) => setEditForm({ ...editForm, price_per_day: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="deposit_amount">Security Deposit ($)</Label>
+                      <Input
+                        id="deposit_amount"
+                        type="number"
+                        value={editForm.deposit_amount || ''}
+                        onChange={(e) => setEditForm({ ...editForm, deposit_amount: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="replacement_value">Replacement Value ($)</Label>
+                      <Input
+                        id="replacement_value"
+                        type="number"
+                        value={editForm.replacement_value || ''}
+                        onChange={(e) => setEditForm({ ...editForm, replacement_value: Number(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                </>
               ) : (
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={handleRequestBooking}
-                  disabled={!item.is_available}
-                >
-                  {item.is_available ? 'Request Booking' : 'Currently Unavailable'}
-                </Button>
-              )}
+                <>
+                  <div>
+                    <p className="text-3xl font-bold text-primary">
+                      ${item.price_per_day}
+                      <span className="text-lg font-normal text-muted-foreground">/day</span>
+                    </p>
+                  </div>
 
-              <div className="pt-4 space-y-2 text-sm text-muted-foreground">
-                <p className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Secure payment processing
-                </p>
-                <p className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Deposit refunded after return
-                </p>
-              </div>
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Security Deposit</span>
+                      <span className="font-medium">${item.deposit_amount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Replacement Value</span>
+                      <span className="font-medium">${item.replacement_value}</span>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {isOwner ? (
+                    <div className="space-y-2">
+                      <Button className="w-full" onClick={startEditing}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Listing
+                      </Button>
+                      <p className="text-sm text-center text-muted-foreground">
+                        This is your listing
+                      </p>
+                    </div>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={handleRequestBooking}
+                      disabled={!item.is_available}
+                    >
+                      {item.is_available ? 'Request Booking' : 'Currently Unavailable'}
+                    </Button>
+                  )}
+
+                  <div className="pt-4 space-y-2 text-sm text-muted-foreground">
+                    <p className="flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Secure payment processing
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      Deposit refunded after return
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

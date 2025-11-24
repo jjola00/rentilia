@@ -17,6 +17,7 @@ import { Logo } from '@/components/icons/logo';
 import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import { useProfile } from '@/hooks/use-profile';
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -42,15 +43,14 @@ export default function Header() {
   };
 
   const UserMenu = () => {
-    const userName = user?.user_metadata?.full_name || user?.email || 'User';
-    const userInitial = userName.charAt(0).toUpperCase();
+    const { displayName, userInitial, avatarUrl } = useProfile();
 
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-10 w-10 rounded-full">
             <Avatar className="h-10 w-10 border-2 border-primary/50">
-              <AvatarImage src={user?.user_metadata?.avatar_url} alt={userName} />
+              <AvatarImage src={avatarUrl} alt={displayName} />
               <AvatarFallback>{userInitial}</AvatarFallback>
             </Avatar>
           </Button>
@@ -58,7 +58,7 @@ export default function Header() {
         <DropdownMenuContent className="w-56" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{userName}</p>
+              <p className="text-sm font-medium leading-none">{displayName}</p>
               <p className="text-xs leading-none text-muted-foreground">
                 {user?.email}
               </p>

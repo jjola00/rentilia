@@ -15,12 +15,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UploadCloud, Loader2, X, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import { useProfile } from '@/hooks/use-profile';
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const { profile, updateProfile, refreshProfile, displayName, userInitial } = useProfile();
   const { toast } = useToast();
   const supabase = createClient();
   
@@ -37,27 +39,18 @@ export default function ProfilePage() {
   const licenseInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (user) {
-      loadProfile();
+    if (profile) {
+      setFullName(profile.full_name || '');
+      setPhone(profile.phone || '');
+      setCity(profile.city || '');
+      setBio(profile.bio || '');
+      setAvatarUrl(profile.avatar_url || '');
+      loadLicense();
     }
-  }, [user]);
+  }, [profile]);
 
-  const loadProfile = async () => {
+  const loadLicense = async () => {
     if (!user) return;
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (data) {
-      setFullName(data.full_name || '');
-      setPhone(data.phone || '');
-      setCity(data.city || '');
-      setBio(data.bio || '');
-      setAvatarUrl(data.avatar_url || '');
-    }
 
     // Load license if exists - Fixed query
     const { data: licenseData } = await supabase
@@ -81,38 +74,30 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
-    
     setLoading(true);
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: fullName,
-        phone,
-        city,
-        bio,
-        avatar_url: avatarUrl,
-      })
-      .eq('id', user.id);
+    const result = await updateProfile({
+      full_name: fullName,
+      phone,
+      city,
+      bio,
+    });
 
-    if (error) {
+    if (result.success) {
+      toast({
+        title: 'Success',
+        description: 'Profile updated successfully',
+      });
+    } else {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to update profile',
       });
-    } else {
-      toast({
-        title: 'Success',
-        description: 'Profile updated successfully',
-      });
     }
 
     setLoading(false);
-  };
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  };  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
@@ -153,34 +138,20 @@ export default function ProfilePage() {
 
       const publicUrl = data.publicUrl;
 
-      // Update BOTH places:
-      
-      // 1. Update the profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user.id);
+      // Update the profiles table via our hook
+      const result = await updateProfile({ avatar_url: publicUrl });
 
-      if (profileError) throw profileError;
+      if (!result.success) {
+        throw new Error('Failed to update profile');
+      }
 
-      // 2. Update the auth user metadata
-      const { error: authError } = await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl }
-      });
-
-      if (authError) throw authError;
-
-      // 3. Update local state immediately (no reload needed!)
+      // Update local state immediately
       setAvatarUrl(publicUrl);
 
       toast({
         title: 'Success',
         description: 'Profile picture updated successfully',
       });
-
-      // REMOVE THIS LINE:
-      // window.location.reload();
-
     } catch (error) {
       console.error('Error uploading avatar:', error);
       toast({
@@ -289,8 +260,6 @@ export default function ProfilePage() {
     }
   };
 
-  const userName = user?.user_metadata?.full_name || user?.email || 'User';
-  const userInitial = userName.charAt(0).toUpperCase();
   return (
     <div className="grid gap-6 md:grid-cols-3">
       <div className="md:col-span-2">
@@ -368,7 +337,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             <Avatar className="h-32 w-32">
-              <AvatarImage src={avatarUrl || user?.user_metadata?.avatar_url} alt={userName} />
+              <AvatarImage src={avatarUrl} alt={displayName} />
               <AvatarFallback>{userInitial}</AvatarFallback>
             </Avatar>
             <input

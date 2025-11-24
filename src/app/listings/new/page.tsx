@@ -27,16 +27,7 @@ import {
 } from '@/lib/validations/item';
 import { PhotoUpload } from '@/components/items/PhotoUpload';
 
-const CATEGORIES = [
-  'Tools & Equipment',
-  'Electronics',
-  'Outdoor & Sports',
-  'Party & Events',
-  'Photography & Video',
-  'Transportation',
-  'Home & Garden',
-  'Other',
-];
+import { CATEGORIES } from '@/lib/constants/categories';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 

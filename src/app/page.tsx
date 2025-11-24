@@ -27,8 +27,20 @@ import {
   PackageSearch,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
-import type { Item } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { CATEGORIES } from '@/lib/constants/categories';
+
+interface Item {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  price_per_day: number;
+  photo_urls: string[];
+  is_available: boolean;
+  owner_id: string;
+  created_at: string;
+}
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -124,11 +136,9 @@ export default function Home() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="Tools & Equipment">Tools & Equipment</SelectItem>
-                    <SelectItem value="Party & Events">Party & Events</SelectItem>
-                    <SelectItem value="Electronics">Electronics</SelectItem>
-                    <SelectItem value="Sports & Outdoors">Sports & Outdoors</SelectItem>
-                    <SelectItem value="Vehicles">Vehicles</SelectItem>
+                    {CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

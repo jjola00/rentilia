@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash2, Loader2, Package } from 'lucide-react';
 import {
@@ -206,30 +205,43 @@ export default function ListingsPage() {
                   <span className="text-sm font-normal text-muted-foreground">/day</span>
                 </p>
               </CardContent>
-              <CardFooter className="p-4 pt-0 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={item.is_available}
-                    onCheckedChange={() => toggleAvailability(item.id, item.is_available)}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {item.is_available ? 'Available' : 'Hidden'}
-                  </span>
+              <CardFooter className="p-4 pt-0 flex flex-col gap-2">
+                <div className="flex gap-2 w-full">
+                  <Button
+                    variant={item.is_available ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => toggleAvailability(item.id, item.is_available)}
+                  >
+                    Available
+                  </Button>
+                  <Button
+                    variant={!item.is_available ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => toggleAvailability(item.id, item.is_available)}
+                  >
+                    Hidden
+                  </Button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full">
                   <Button
                     variant="outline"
-                    size="icon"
-                    onClick={() => router.push(`/listings/${item.id}/edit`)}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => router.push(`/listings/${item.id}`)}
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
                   </Button>
                   <Button
                     variant="outline"
-                    size="icon"
+                    size="sm"
+                    className="flex-1"
                     onClick={() => setDeleteId(item.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
                   </Button>
                 </div>
               </CardFooter>

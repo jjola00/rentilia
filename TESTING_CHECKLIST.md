@@ -38,59 +38,59 @@
 - [x] Refresh page and confirm changes persisted
 
 ### Logout
-- [ ] Click user avatar in header
-- [ ] Click "Log out"
-- [ ] Verify redirect to home page
-- [ ] Confirm header shows login buttons again
+- [x] Click user avatar in header
+- [x] Click "Log out"
+- [x] Verify redirect to home page
+- [x] Confirm header shows login buttons again
 
 ## Phase 3: Item Listing & Management
 
 ### Create New Listing
-- [ ] Navigate to `/listings/new` or click "List an Item" in header
-- [ ] **Step 1 - Basic Info:**
-  - [ ] Enter title (min 5 characters)
-  - [ ] Enter description (min 20 characters)
-  - [ ] Select category
-  - [ ] Click "Next"
-- [ ] **Step 2 - Pricing:**
-  - [ ] Enter price per day
-  - [ ] Enter replacement value
-  - [ ] Enter security deposit
-  - [ ] Click "Next"
-- [ ] **Step 3 - Availability:**
-  - [ ] Set minimum rental days
-  - [ ] Set maximum rental days (must be >= minimum)
-  - [ ] Select pickup type (Renter Pickup or Owner Delivery)
-  - [ ] Click "Next"
-- [ ] **Step 4 - Photos:**
-  - [ ] Upload at least one photo (drag & drop or click to upload)
-  - [ ] Verify photo preview appears
-  - [ ] Test removing a photo
-  - [ ] Click "Next"
-- [ ] **Step 5 - Requirements:**
-  - [ ] Enter pickup address
-  - [ ] Optionally check "Require license"
-  - [ ] Click "Create Listing"
-- [ ] Verify success message
-- [ ] Confirm redirect to `/dashboard/listings`
+- [x] Navigate to `/listings/new` or click "List an Item" in header
+- [x] **Step 1 - Basic Info:**
+  - [x] Enter title (min 5 characters)
+  - [x] Enter description (min 20 characters)
+  - [x] Select category
+  - [x] Click "Next"
+- [x] **Step 2 - Pricing:**
+  - [x] Enter price per day
+  - [x] Enter replacement value
+  -[x] Enter security deposit
+  - [x] Click "Next"
+- [x] **Step 3 - Availability:**
+  - [x] Set minimum rental days
+  - [x] Set maximum rental days (must be >= minimum)
+  - [x] Select pickup type (Renter Pickup or Owner Delivery)
+  - [x] Click "Next"
+- [x] **Step 4 - Photos:**
+  - [x] Upload at least one photo (drag & drop or click to upload)
+  - [x] Verify photo preview appears
+  - [x] Test removing a photo
+  - [x] Click "Next"
+- [x] **Step 5 - Requirements:**
+  - [x] Enter pickup address
+  - [x] Optionally check "Require license"
+  - [x] Click "Create Listing"
+- [x] Verify success message
+- [x] Confirm redirect to `/dashboard/listings`
 
 ### View My Listings
-- [ ] Navigate to `/dashboard/listings`
-- [ ] Verify your created item appears
-- [ ] Check item shows correct photo, title, category, and price
-- [ ] Toggle availability switch (Available/Hidden)
-- [ ] Verify item status updates
+- [x] Navigate to `/dashboard/listings`
+- [x] Verify your created item appears
+- [x] Check item shows correct photo, title, category, and price
+- [x] Toggle availability switch (Available/Hidden)
+- [x] Verify item status updates
 
 ### Edit Listing
-- [ ] Click edit icon on a listing
-- [ ] Modify any field
-- [ ] Save changes
-- [ ] Verify updates are reflected
+- [x] Click edit icon on a listing
+- [x] Modify any field
+- [x] Save changes
+- [x] Verify updates are reflected
 
 ### Delete Listing
-- [ ] Click delete icon on a listing
-- [ ] Confirm deletion in dialog
-- [ ] Verify item is removed from list
+- [x] Click delete icon on a listing
+- [x] Confirm deletion in dialog
+- [x] Verify item is removed from list
 
 ### View Item Details
 - [ ] Navigate to `/browse`
