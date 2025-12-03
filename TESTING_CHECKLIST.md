@@ -93,51 +93,50 @@
 - [x] Verify item is removed from list
 
 ### View Item Details
-- [ ] Navigate to `/browse`
-- [ ] Click on any item
-- [ ] Verify all details display correctly:
-  - [ ] Photo carousel (if multiple photos)
-  - [ ] Title, category, description
-  - [ ] Price per day
-  - [ ] Security deposit and replacement value
-  - [ ] Rental period constraints
-  - [ ] Pickup type
-  - [ ] Owner information
-- [ ] If you're the owner, verify "Edit Listing" button shows
-- [ ] If you're not the owner, verify "Request Booking" button shows
+- [x] Navigate to `/browse`
+- [x] Click on any item
+- [x] Verify all details display correctly:
+  - [x] Photo carousel (if multiple photos)
+  - [x] Title, category, description
+  - [x] Price per day
+  - [x] Security deposit and replacement value
+  - [x] Rental period constraints
+  - [x] Pickup type
+  - [x] Owner information
+- [x] If you're the owner, verify "Edit Listing" button shows
+- [x] If you're not the owner, verify "Request Booking" button shows
 
 ## Phase 4: Search & Discovery
 
 ### Browse Items
-- [ ] Navigate to `/browse`
-- [ ] Verify all available items display in grid
-- [ ] Check item cards show photo, title, category, and price
+- [x] Navigate to `/browse`
+- [x] Verify all available items display in grid
+- [x] Check item cards show photo, title, category, and price
 
 ### Category Filter
-- [ ] Select a category from dropdown
-- [ ] Verify only items in that category display
-- [ ] Select "All Categories"
-- [ ] Verify all items display again
+- [x] Select a category from dropdown
+- [x] Verify only items in that category display
+- [x] Select "All Categories"
+- [x] Verify all items display again
 
 ### Price Filter
-- [ ] Adjust price range slider
-- [ ] Verify only items within price range display
-- [ ] Move slider to maximum
-- [ ] Verify all items display
+- [x] Adjust price range slider
+- [x] Verify only items within price range display
+- [x] Move slider to maximum
+- [x] Verify all items display
 
 ### Location Filter
-- [ ] Enter a city in the city filter
-- [ ] Verify only items from that city display
-- [ ] Enter a state in the state filter
-- [ ] Verify filtering works
-- [ ] Clear filters
-- [ ] Verify all items display
+- [x] Enter a city in the city filter
+- [x] Verify only items from that city display
+- [x] Verify filtering works
+- [x] Clear filters
+- [x] Verify all items display
 
 ### Keyword Search
-- [ ] Enter a search term in the search box (if implemented)
-- [ ] Verify items matching title or description display
-- [ ] Clear search
-- [ ] Verify all items display
+- [x] Enter a search term in the search box (if implemented)
+- [x] Verify items matching title or description display
+- [x] Clear search
+- [x] Verify all items display
 
 ## Phase 5: Booking System
 

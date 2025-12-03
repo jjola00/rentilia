@@ -235,7 +235,7 @@ function BookingFormContent() {
   const canProceed = startDate && endDate && !durationError && (!item.is_license_required || hasValidLicense);
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
+    <div className="container max-w-6xl mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-6">Request Booking</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -257,7 +257,7 @@ function BookingFormContent() {
                 <div>
                   <h3 className="font-semibold text-lg">{item.title}</h3>
                   <p className="text-muted-foreground">
-                    ${item.price_per_day}/day
+                    €{item.price_per_day}/day
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
                     Rental period: {item.min_rental_days}-{item.max_rental_days} days
@@ -348,13 +348,13 @@ function BookingFormContent() {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        ${item.price_per_day} × {rentalDays} days
+                        €{item.price_per_day} × {rentalDays} days
                       </span>
-                      <span className="font-medium">${rentalFee.toFixed(2)}</span>
+                      <span className="font-medium">€{rentalFee.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Security Deposit</span>
-                      <span className="font-medium">${deposit.toFixed(2)}</span>
+                      <span className="font-medium">€{deposit.toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -362,7 +362,7 @@ function BookingFormContent() {
 
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span>${total.toFixed(2)}</span>
+                    <span>€{total.toFixed(2)}</span>
                   </div>
 
                   <p className="text-xs text-muted-foreground">

@@ -47,7 +47,7 @@ import { format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 
 export default function Home() {
-  const [priceRange, setPriceRange] = React.useState([500]);
+  const [priceRange, setPriceRange] = React.useState([499]);
   // Data fetching will be implemented here. For now, we use an empty array.
   const [featuredItems, setFeaturedItems] = React.useState<Item[]>([]);
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -144,13 +144,15 @@ export default function Home() {
               </div>
 
               <div className="space-y-2">
-                <Label>Max Daily Rate: ${priceRange[0]}</Label>
+                <Label>Max Daily Rate: {priceRange[0] >= 499 ? '€500+' : `€${priceRange[0]}`}</Label>
                 <Slider
-                  defaultValue={[500]}
-                  max={500}
+                  defaultValue={[499]}
+                  min={1}
+                  max={499}
                   step={10}
                   onValueChange={setPriceRange}
                 />
+                <p className="text-xs text-muted-foreground">Set to max (€500+) to see all items</p>
               </div>
 
               <div className="space-y-2">

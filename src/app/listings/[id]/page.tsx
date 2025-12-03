@@ -470,7 +470,7 @@ export default function ItemDetailPage() {
                 <>
                   <div>
                     <p className="text-3xl font-bold text-primary">
-                      ${item.price_per_day}
+                      €{item.price_per_day}
                       <span className="text-lg font-normal text-muted-foreground">/day</span>
                     </p>
                   </div>
@@ -480,11 +480,11 @@ export default function ItemDetailPage() {
                   <div className="space-y-3">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Security Deposit</span>
-                      <span className="font-medium">${item.deposit_amount}</span>
+                      <span className="font-medium">€{item.deposit_amount}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Replacement Value</span>
-                      <span className="font-medium">${item.replacement_value}</span>
+                      <span className="font-medium">€{item.replacement_value}</span>
                     </div>
                   </div>
 

@@ -201,7 +201,7 @@ export default function ListingsPage() {
                 <h3 className="font-semibold text-lg mb-1 line-clamp-1">{item.title}</h3>
                 <p className="text-sm text-muted-foreground mb-2">{item.category}</p>
                 <p className="text-2xl font-bold text-primary">
-                  ${item.price_per_day}
+                  €{item.price_per_day}
                   <span className="text-sm font-normal text-muted-foreground">/day</span>
                 </p>
               </CardContent>

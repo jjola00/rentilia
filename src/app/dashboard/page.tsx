@@ -142,7 +142,7 @@ function DashboardPage() {
                     <div className="font-semibold">{item.title}</div>
                     <div className="text-xs text-muted-foreground">{item.category}</div>
                   </div>
-                  <div className="text-primary font-bold">${item.price_per_day}</div>
+                  <div className="text-primary font-bold">€{item.price_per_day}</div>
                   <Button asChild size="sm" variant="outline">
                     <Link href={`/listings/${item.id}`}>View</Link>
                   </Button>

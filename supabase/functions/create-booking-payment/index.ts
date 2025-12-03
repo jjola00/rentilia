@@ -7,8 +7,9 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
   httpClient: Stripe.createFetchHttpClient(),
 });
 
+// Supabase automatically provides these environment variables
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY')!;
 
 serve(async (req) => {
   const corsHeaders = {
@@ -62,7 +63,7 @@ serve(async (req) => {
     // Create Payment Intent for rental fee (immediate capture)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(booking.total_rental_fee * 100), // Convert to cents
-      currency: 'usd',
+      currency: 'eur',
       automatic_payment_methods: {
         enabled: true,
       },
@@ -72,12 +73,14 @@ serve(async (req) => {
         renter_id: user.id,
         item_id: booking.item_id,
       },
+    }, {
+      idempotencyKey: `rental_${bookingId}`,
     });
 
     // Create Payment Intent for deposit (manual capture)
     const depositIntent = await stripe.paymentIntents.create({
       amount: Math.round(booking.deposit_amount * 100), // Convert to cents
-      currency: 'usd',
+      currency: 'eur',
       capture_method: 'manual',
       automatic_payment_methods: {
         enabled: true,
@@ -88,6 +91,8 @@ serve(async (req) => {
         renter_id: user.id,
         item_id: booking.item_id,
       },
+    }, {
+      idempotencyKey: `deposit_${bookingId}`,
     });
 
     // Update booking with payment intent IDs

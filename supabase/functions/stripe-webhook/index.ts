@@ -12,6 +12,17 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { 
+      headers: { 
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'stripe-signature, content-type',
+      } 
+    });
+  }
+
   const signature = req.headers.get('stripe-signature');
 
   if (!signature) {
@@ -20,7 +31,7 @@ serve(async (req) => {
 
   try {
     const body = await req.text();
-    const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    const event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -62,22 +73,144 @@ serve(async (req) => {
 
         console.log(`Payment succeeded for booking ${bookingId}, type: ${paymentType}`);
 
-        // Update booking status to paid
-        const { error: updateError } = await supabase
-          .from('bookings')
-          .update({
-            status: 'paid',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', bookingId);
+        // Only update status when rental fee is paid (not deposit)
+        if (paymentType === 'rental_fee') {
+          // Get booking details with item and user info
+          const { data: booking, error: bookingError } = await supabase
+            .from('bookings')
+            .select(`
+              *,
+              items!inner (
+                title,
+                pickup_address,
+                owner_id
+              )
+            `)
+            .eq('id', bookingId)
+            .single();
 
-        if (updateError) {
-          console.error('Error updating booking:', updateError);
-          throw updateError;
+          if (bookingError) {
+            console.error('Error fetching booking:', bookingError);
+            throw bookingError;
+          }
+
+          // Get renter profile
+          const { data: renterProfile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', booking.renter_id)
+            .single();
+
+          // Get owner profile
+          const { data: ownerProfile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', booking.items.owner_id)
+            .single();
+
+          if (bookingError) {
+            console.error('Error fetching booking:', bookingError);
+            throw bookingError;
+          }
+
+          // Update booking status to paid
+          const { error: updateError } = await supabase
+            .from('bookings')
+            .update({
+              status: 'paid',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', bookingId);
+
+          if (updateError) {
+            console.error('Error updating booking:', updateError);
+            throw updateError;
+          }
+
+          // Send confirmation emails
+          const startDate = new Date(booking.start_datetime).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          });
+          const endDate = new Date(booking.end_datetime).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          });
+
+          // Email to renter
+          if (renterProfile) {
+            await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseServiceKey}`,
+              },
+              body: JSON.stringify({
+                to: renterProfile.email,
+                subject: `Booking Confirmed: ${booking.items.title}`,
+                html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #2563eb;">🎉 Your Booking is Confirmed!</h2>
+                    <p>Hi ${renterProfile.full_name},</p>
+                    <p>Great news! Your booking has been confirmed and payment processed successfully.</p>
+                    
+                    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                      <h3 style="margin-top: 0;">${booking.items.title}</h3>
+                      <p><strong>Rental Period:</strong><br>${startDate} - ${endDate}</p>
+                      <p><strong>Pickup Location:</strong><br>${booking.items.pickup_address}</p>
+                      <p><strong>Rental Fee:</strong> €${booking.total_rental_fee.toFixed(2)}</p>
+                      <p><strong>Security Deposit (held):</strong> €${booking.deposit_amount.toFixed(2)}</p>
+                    </div>
+                    
+                    <h3>What's Next?</h3>
+                    <ul>
+                      <li>Coordinate pickup with the owner</li>
+                      <li>Your deposit will be refunded after you return the item</li>
+                    </ul>
+                    
+                    <p>Happy renting!<br>The Rentilia Team</p>
+                  </div>
+                `,
+              }),
+            });
+          }
+
+          // Email to owner
+          if (ownerProfile) {
+            await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseServiceKey}`,
+              },
+              body: JSON.stringify({
+                to: ownerProfile.email,
+                subject: `New Booking: ${booking.items.title}`,
+                html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #2563eb;">📦 New Booking Received!</h2>
+                    <p>Hi ${ownerProfile.full_name},</p>
+                    <p>You have a new confirmed booking for your item.</p>
+                    
+                    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                      <h3 style="margin-top: 0;">${booking.items.title}</h3>
+                      <p><strong>Renter:</strong> ${renterProfile?.full_name || 'Unknown'}</p>
+                      <p><strong>Rental Period:</strong><br>${startDate} - ${endDate}</p>
+                      <p><strong>Rental Fee:</strong> €${booking.total_rental_fee.toFixed(2)}</p>
+                    </div>
+                    
+                    <p>Please coordinate with the renter for pickup arrangements.</p>
+                    <p>Best regards,<br>The Rentilia Team</p>
+                  </div>
+                `,
+              }),
+            });
+          }
+
+          console.log('Booking updated to paid status and emails sent');
         }
-
-        // TODO: Send confirmation email to renter and owner
-        console.log('Booking updated to paid status');
         break;
       }
 
@@ -92,6 +225,26 @@ serve(async (req) => {
 
         console.log(`Payment failed for booking ${bookingId}`);
 
+        // Get booking and renter details
+        const { data: booking } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            items!inner (title)
+          `)
+          .eq('id', bookingId)
+          .single();
+
+        let renterProfile = null;
+        if (booking) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', booking.renter_id)
+            .single();
+          renterProfile = data;
+        }
+
         // Log the failure
         await supabase.from('payment_failures').insert({
           booking_id: bookingId,
@@ -100,8 +253,36 @@ serve(async (req) => {
           failed_at: new Date().toISOString(),
         });
 
-        // TODO: Send failure notification email to renter
-        console.log('Payment failure logged');
+        // Send failure notification email to renter
+        if (booking && renterProfile) {
+          await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              to: renterProfile.email,
+              subject: `Payment Failed: ${booking.items.title}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #dc2626;">❌ Payment Failed</h2>
+                  <p>Hi ${renterProfile.full_name},</p>
+                  <p>Unfortunately, your payment for <strong>${booking.items.title}</strong> could not be processed.</p>
+                  
+                  <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0;"><strong>Error:</strong> ${paymentIntent.last_payment_error?.message || 'Unknown error'}</p>
+                  </div>
+                  
+                  <p>Please try again with a different payment method or contact your bank if the issue persists.</p>
+                  <p>The Rentilia Team</p>
+                </div>
+              `,
+            }),
+          });
+        }
+
+        console.log('Payment failure logged and email sent');
         break;
       }
 

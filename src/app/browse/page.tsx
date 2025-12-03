@@ -50,7 +50,7 @@ function BrowsePageContent() {
   const [loading, setLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState(searchParams.get('q') || '');
   const [category, setCategory] = React.useState(searchParams.get('category') || 'all');
-  const [priceRange, setPriceRange] = React.useState([Number(searchParams.get('price')) || 500]);
+  const [priceRange, setPriceRange] = React.useState([Number(searchParams.get('price')) || 499]);
   const [city, setCity] = React.useState(searchParams.get('city') || '');
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(() => {
     const from = searchParams.get('from');
@@ -90,8 +90,8 @@ function BrowsePageContent() {
         query = query.eq('category', category);
       }
 
-      // Apply price filter (only if greater than 0)
-      if (priceRange && priceRange[0] > 0) {
+      // Apply price filter (only if less than max and greater than 0)
+      if (priceRange && priceRange[0] > 0 && priceRange[0] < 499) {
         query = query.lte('price_per_day', priceRange[0]);
       }
 
@@ -156,15 +156,15 @@ function BrowsePageContent() {
               </div>
 
               <div className="space-y-2">
-                <Label>Max Daily Rate: {priceRange[0] >= 500 ? 'Any' : `$${priceRange[0]}`}</Label>
+                <Label>Max Daily Rate: {priceRange[0] >= 499 ? '€500+' : `€${priceRange[0]}`}</Label>
                 <Slider
                   value={priceRange}
-                  min={0}
-                  max={500}
+                  min={1}
+                  max={499}
                   step={10}
                   onValueChange={setPriceRange}
                 />
-                <p className="text-xs text-muted-foreground">Set to max to see all items</p>
+                <p className="text-xs text-muted-foreground">Set to max (€500+) to see all items</p>
               </div>
 
               <div className="space-y-2">

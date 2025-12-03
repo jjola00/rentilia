@@ -1,0 +1,2 @@
+- should be able to rent product for 1 day
+- COntinue with google should give you all google options

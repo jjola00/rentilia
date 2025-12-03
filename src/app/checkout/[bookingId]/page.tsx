@@ -60,6 +60,10 @@ function CheckoutForm({ booking, clientSecrets }: { booking: BookingDetails; cli
       });
 
       if (rentalError) {
+        // Check if it's a card error that can be retried
+        if (rentalError.type === 'card_error' || rentalError.type === 'validation_error') {
+          throw new Error(rentalError.message);
+        }
         throw new Error(rentalError.message);
       }
 
@@ -79,12 +83,14 @@ function CheckoutForm({ booking, clientSecrets }: { booking: BookingDetails; cli
       router.push(`/bookings/${booking.id}/confirmation`);
     } catch (error: any) {
       console.error('Payment error:', error);
-      setErrorMessage(error.message || 'Payment failed. Please try again.');
+      const errorMsg = error.message || 'Payment failed. Please try again.';
+      setErrorMessage(errorMsg);
       toast({
         variant: 'destructive',
         title: 'Payment failed',
-        description: error.message || 'Please try again',
+        description: errorMsg,
       });
+      // Don't redirect - let user retry
     } finally {
       setProcessing(false);
     }
@@ -128,7 +134,7 @@ function CheckoutForm({ booking, clientSecrets }: { booking: BookingDetails; cli
             Processing Payment...
           </>
         ) : (
-          `Pay $${(booking.total_rental_fee + booking.deposit_amount).toFixed(2)}`
+          `Pay €${(booking.total_rental_fee + booking.deposit_amount).toFixed(2)}`
         )}
       </Button>
     </form>
@@ -273,11 +279,11 @@ export default function CheckoutPage() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Rental Fee</span>
-                  <span className="font-medium">${booking.total_rental_fee.toFixed(2)}</span>
+                  <span className="font-medium">€{booking.total_rental_fee.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Security Deposit</span>
-                  <span className="font-medium">${booking.deposit_amount.toFixed(2)}</span>
+                  <span className="font-medium">€{booking.deposit_amount.toFixed(2)}</span>
                 </div>
               </div>
 
@@ -285,7 +291,7 @@ export default function CheckoutPage() {
 
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>${(booking.total_rental_fee + booking.deposit_amount).toFixed(2)}</span>
+                <span>€{(booking.total_rental_fee + booking.deposit_amount).toFixed(2)}</span>
               </div>
 
               <div className="pt-4 space-y-2 text-sm text-muted-foreground">

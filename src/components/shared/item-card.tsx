@@ -46,7 +46,7 @@ export default function ItemCard({ item }: ItemCardProps) {
         <CardFooter className="flex justify-between p-4 pt-0">
           <div className="flex flex-col">
             <p className="text-xl font-bold text-foreground">
-              ${item.price_per_day}
+              €{item.price_per_day}
               <span className="text-sm font-normal text-muted-foreground">/day</span>
             </p>
           </div>
