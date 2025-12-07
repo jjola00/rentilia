@@ -94,6 +94,34 @@ serve(async (req) => {
             throw bookingError;
           }
 
+          // Validate that the deposit intent exists and is authorized before marking paid
+          let depositIntent: Stripe.PaymentIntent | null = null;
+          let depositOk = false;
+          if (booking.deposit_pi_id) {
+            try {
+              depositIntent = await stripe.paymentIntents.retrieve(booking.deposit_pi_id);
+              depositOk = ['requires_capture', 'processing', 'succeeded'].includes(depositIntent.status);
+            } catch (err) {
+              console.error('Error retrieving deposit intent', err);
+            }
+          }
+
+          if (!depositOk) {
+            const depositStatus = depositIntent?.status || 'missing';
+            console.error(`Deposit not authorized for booking ${bookingId}. Status: ${depositStatus}`);
+            await supabase.from('payment_failures').insert({
+              booking_id: bookingId,
+              payment_intent_id: booking.deposit_pi_id || null,
+              error_message: `Deposit not capturable (status: ${depositStatus})`,
+              failed_at: new Date().toISOString(),
+            });
+            // Stop processing: do not mark as paid until deposit hold exists
+            return new Response(JSON.stringify({ received: true, deposit_ready: false }), {
+              headers: { 'Content-Type': 'application/json' },
+              status: 200,
+            });
+          }
+
           // Get renter profile
           const { data: renterProfile } = await supabase
             .from('profiles')

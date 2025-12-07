@@ -60,6 +60,14 @@ serve(async (req) => {
       throw new Error('Booking is not in requested status');
     }
 
+    // Prevent double-charging rental fee if it is already paid
+    if (booking.payment_intent_id) {
+      const existingRental = await stripe.paymentIntents.retrieve(booking.payment_intent_id);
+      if (['succeeded', 'processing', 'requires_capture'].includes(existingRental.status)) {
+        throw new Error('Rental payment already processed. Please contact support to re-authorize the deposit.');
+      }
+    }
+
     // Validate rental window against item rules
     if (!booking.start_datetime || !booking.end_datetime) {
       throw new Error('Booking dates are required');
