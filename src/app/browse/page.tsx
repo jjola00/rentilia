@@ -26,6 +26,10 @@ import {
   PackageSearch,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { differenceInCalendarDays, format, parseISO } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
 interface Item {
   id: string;
   title: string;
@@ -36,11 +40,10 @@ interface Item {
   is_available: boolean;
   owner_id: string;
   created_at: string;
+  min_rental_days: number;
+  max_rental_days: number;
+  pickup_type: 'renter_pickup' | 'owner_delivery';
 }
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format, parseISO } from 'date-fns';
-import type { DateRange } from 'react-day-picker';
 
 function BrowsePageContent() {
   const searchParams = useSearchParams();
@@ -60,12 +63,14 @@ function BrowsePageContent() {
     }
     return undefined;
   });
+  const [pickupAvailable, setPickupAvailable] = React.useState(searchParams.get('pickup') === 'true');
+  const [deliveryAvailable, setDeliveryAvailable] = React.useState(searchParams.get('delivery') === 'true');
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 12;
 
   React.useEffect(() => {
     loadItems();
-  }, [category, priceRange, searchTerm, city]);
+  }, [category, priceRange, searchTerm, city, pickupAvailable, deliveryAvailable, dateRange]);
 
   const loadItems = async () => {
     setLoading(true);
@@ -95,6 +100,13 @@ function BrowsePageContent() {
         query = query.lte('price_per_day', priceRange[0]);
       }
 
+      // Apply pickup/delivery filters
+      if (pickupAvailable && !deliveryAvailable) {
+        query = query.eq('pickup_type', 'renter_pickup');
+      } else if (deliveryAvailable && !pickupAvailable) {
+        query = query.eq('pickup_type', 'owner_delivery');
+      }
+
       // Apply search filter
       if (searchTerm) {
         query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
@@ -114,6 +126,15 @@ function BrowsePageContent() {
       if (city) {
         filteredData = filteredData.filter((item: any) => 
           item.profiles?.city?.toLowerCase().includes(city.toLowerCase())
+        );
+      }
+
+      // Filter by requested rental duration against item min/max days
+      if (dateRange?.from && dateRange?.to) {
+        const days = differenceInCalendarDays(dateRange.to, dateRange.from) + 1;
+        filteredData = filteredData.filter((item: any) => 
+          (!item.min_rental_days || days >= item.min_rental_days) &&
+          (!item.max_rental_days || days <= item.max_rental_days)
         );
       }
 
@@ -217,11 +238,11 @@ function BrowsePageContent() {
 
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="pickup" />
+                  <Checkbox id="pickup" checked={pickupAvailable} onCheckedChange={(checked) => setPickupAvailable(Boolean(checked))} />
                   <Label htmlFor="pickup">Pickup Available</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="delivery" />
+                  <Checkbox id="delivery" checked={deliveryAvailable} onCheckedChange={(checked) => setDeliveryAvailable(Boolean(checked))} />
                   <Label htmlFor="delivery">Delivery Available</Label>
                 </div>
               </div>

@@ -29,6 +29,11 @@ import {
 import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import { CATEGORIES } from '@/lib/constants/categories';
+import { createClient } from '@/lib/supabase/client';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
 
 interface Item {
   id: string;
@@ -41,10 +46,6 @@ interface Item {
   owner_id: string;
   created_at: string;
 }
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import type { DateRange } from 'react-day-picker';
 
 export default function Home() {
   const [priceRange, setPriceRange] = React.useState([499]);
@@ -54,17 +55,21 @@ export default function Home() {
   const [location, setLocation] = React.useState('');
   const [category, setCategory] = React.useState('all');
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
+  const [pickupAvailable, setPickupAvailable] = React.useState(false);
+  const [deliveryAvailable, setDeliveryAvailable] = React.useState(false);
 
   const router = useRouter();
 
   const handleSearch = () => {
     const queryParams = new URLSearchParams();
     if (searchTerm) queryParams.set('q', searchTerm);
-    if (location) queryParams.set('location', location);
+    if (location) queryParams.set('city', location);
     if (category !== 'all') queryParams.set('category', category);
     if (priceRange[0] < 500) queryParams.set('price', priceRange[0].toString());
     if (dateRange?.from) queryParams.set('from', dateRange.from.toISOString());
     if (dateRange?.to) queryParams.set('to', dateRange.to.toISOString());
+    if (pickupAvailable) queryParams.set('pickup', 'true');
+    if (deliveryAvailable) queryParams.set('delivery', 'true');
 
     router.push(`/browse?${queryParams.toString()}`);
   };
@@ -74,6 +79,24 @@ export default function Home() {
         handleSearch();
     }
   }
+
+  React.useEffect(() => {
+    const loadFeatured = async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .eq('is_available', true)
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      if (!error && data) {
+        setFeaturedItems(data as Item[]);
+      }
+    };
+
+    loadFeatured();
+  }, []);
 
 
   return (
@@ -191,11 +214,11 @@ export default function Home() {
 
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="pickup" />
+                  <Checkbox id="pickup" checked={pickupAvailable} onCheckedChange={(checked) => setPickupAvailable(Boolean(checked))} />
                   <Label htmlFor="pickup">Pickup Available</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="delivery" />
+                  <Checkbox id="delivery" checked={deliveryAvailable} onCheckedChange={(checked) => setDeliveryAvailable(Boolean(checked))} />
                   <Label htmlFor="delivery">Delivery Available</Label>
                 </div>
               </div>

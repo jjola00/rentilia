@@ -44,14 +44,7 @@ serve(async (req) => {
         *,
         items (
           title,
-          owner_id,
-          profiles!items_owner_id_fkey (
-            full_name,
-            email
-          )
-        ),
-        profiles!bookings_renter_id_fkey (
-          full_name
+          owner_id
         )
       `)
       .eq('id', bookingId)
@@ -59,6 +52,20 @@ serve(async (req) => {
 
     if (bookingError || !booking) {
       throw new Error('Booking not found');
+    }
+
+    // Load profiles separately to avoid FK relationship issues
+    const [{ data: ownerProfile, error: ownerErr }, { data: renterProfile, error: renterErr }] =
+      await Promise.all([
+        supabase.from('profiles').select('full_name,email').eq('id', booking.items.owner_id).single(),
+        supabase.from('profiles').select('full_name').eq('id', booking.renter_id).single(),
+      ]);
+
+    if (ownerErr || !ownerProfile) {
+      throw new Error('Owner profile not found');
+    }
+    if (renterErr || !renterProfile) {
+      throw new Error('Renter profile not found');
     }
 
     // Verify user is the renter
@@ -92,13 +99,13 @@ serve(async (req) => {
         'Authorization': `Bearer ${supabaseServiceKey}`,
       },
       body: JSON.stringify({
-        to: booking.items.profiles.email,
+        to: ownerProfile.email,
         subject: `Return Pending Confirmation: ${booking.items.title}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2563eb;">🔄 Item Return Initiated</h2>
-            <p>Hi ${booking.items.profiles.full_name},</p>
-            <p>${booking.profiles.full_name} has marked <strong>${booking.items.title}</strong> as returned.</p>
+            <p>Hi ${ownerProfile.full_name},</p>
+            <p>${renterProfile.full_name} has marked <strong>${booking.items.title}</strong> as returned.</p>
             
             <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <p style="margin: 0;"><strong>Action Required:</strong> Please inspect the item and confirm the return in your dashboard.</p>

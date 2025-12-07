@@ -68,10 +68,18 @@ serve(async (req) => {
 
     let result;
 
+    // Always fetch latest deposit PI to validate status before acting
+    const depositIntent = await stripe.paymentIntents.retrieve(booking.deposit_pi_id);
+
     if (action === 'release') {
       // Only owner can release deposit
       if (!isOwner) {
         throw new Error('Only the owner can release the deposit');
+      }
+
+      // Can only cancel (release) a manual PI that is still capturable
+      if (depositIntent.status !== 'requires_capture') {
+        throw new Error(`Deposit is not on hold (status: ${depositIntent.status}). Nothing to release.`);
       }
 
       // Cancel the payment intent to release the hold
@@ -97,9 +105,17 @@ serve(async (req) => {
         throw new Error('Valid amount is required for capture');
       }
 
+      // Guard: deposit must be authorized and capturable
+      if (depositIntent.status !== 'requires_capture') {
+        throw new Error(`Deposit is not ready to capture (status: ${depositIntent.status}). Ask renter to complete checkout.`);
+      }
+
+      if (!depositIntent.amount_capturable || depositIntent.amount_capturable <= 0) {
+        throw new Error('Deposit hold is missing capturable amount.');
+      }
+
       // Capture the specified amount (or full deposit)
       const captureAmount = Math.min(amount, booking.deposit_amount);
-      
       result = await stripe.paymentIntents.capture(booking.deposit_pi_id, {
         amount_to_capture: Math.round(captureAmount * 100),
       });

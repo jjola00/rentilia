@@ -44,15 +44,7 @@ serve(async (req) => {
         *,
         items (
           owner_id,
-          title,
-          profiles!items_owner_id_fkey (
-            full_name,
-            email
-          )
-        ),
-        profiles!bookings_renter_id_fkey (
-          full_name,
-          email
+          title
         )
       `)
       .eq('id', bookingId)
@@ -60,6 +52,20 @@ serve(async (req) => {
 
     if (bookingError || !booking) {
       throw new Error('Booking not found');
+    }
+
+    // Load profiles separately
+    const [{ data: ownerProfile, error: ownerErr }, { data: renterProfile, error: renterErr }] =
+      await Promise.all([
+        supabase.from('profiles').select('full_name,email').eq('id', booking.items.owner_id).single(),
+        supabase.from('profiles').select('full_name,email').eq('id', booking.renter_id).single(),
+      ]);
+
+    if (ownerErr || !ownerProfile) {
+      throw new Error('Owner profile not found');
+    }
+    if (renterErr || !renterProfile) {
+      throw new Error('Renter profile not found');
     }
 
     // Verify user is the owner
@@ -116,12 +122,12 @@ serve(async (req) => {
           'Authorization': `Bearer ${supabaseServiceKey}`,
         },
         body: JSON.stringify({
-          to: booking.profiles.email,
+          to: renterProfile.email,
           subject: `Deposit Partially Captured: ${booking.items.title}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #ea580c;">⚠️ Deposit Partially Captured</h2>
-              <p>Hi ${booking.profiles.full_name},</p>
+              <p>Hi ${renterProfile.full_name},</p>
               <p>The owner has reported damage to the rented item and captured a portion of your security deposit.</p>
               
               <div style="background: #fff7ed; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -173,12 +179,12 @@ serve(async (req) => {
           'Authorization': `Bearer ${supabaseServiceKey}`,
         },
         body: JSON.stringify({
-          to: booking.profiles.email,
+          to: renterProfile.email,
           subject: `Deposit Released: ${booking.items.title}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #16a34a;">✅ Deposit Released!</h2>
-              <p>Hi ${booking.profiles.full_name},</p>
+              <p>Hi ${renterProfile.full_name},</p>
               <p>Great news! Your security deposit has been released.</p>
               
               <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">

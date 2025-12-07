@@ -60,6 +60,60 @@ serve(async (req) => {
       throw new Error('Booking is not in requested status');
     }
 
+    // Validate rental window against item rules
+    if (!booking.start_datetime || !booking.end_datetime) {
+      throw new Error('Booking dates are required');
+    }
+
+    const startDate = new Date(booking.start_datetime);
+    const endDate = new Date(booking.end_datetime);
+    const rentalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (booking.items?.min_rental_days && rentalDays < booking.items.min_rental_days) {
+      throw new Error(`Minimum rental period is ${booking.items.min_rental_days} days`);
+    }
+
+    if (booking.items?.max_rental_days && rentalDays > booking.items.max_rental_days) {
+      throw new Error(`Maximum rental period is ${booking.items.max_rental_days} days`);
+    }
+
+    // Ensure no overlapping bookings for this item
+    const { data: overlappingBookings, error: overlapError } = await supabase
+      .from('bookings')
+      .select('id, status, start_datetime, end_datetime')
+      .eq('item_id', booking.item_id)
+      .in('status', ['requested', 'paid', 'picked_up', 'returned_waiting_owner'])
+      .not('id', 'eq', bookingId)
+      .lte('start_datetime', endDate.toISOString())
+      .gte('end_datetime', startDate.toISOString());
+
+    if (overlapError) {
+      throw new Error('Unable to verify booking availability');
+    }
+
+    if (overlappingBookings && overlappingBookings.length > 0) {
+      throw new Error('This item is already booked for the selected dates');
+    }
+
+    // If item requires license, verify renter has a valid one
+    if (booking.items?.is_license_required) {
+      const { data: licenseData, error: licenseError } = await supabase
+        .from('licenses')
+        .select('id, is_verified, expiry_date')
+        .eq('user_id', user.id)
+        .eq('is_verified', true)
+        .gte('expiry_date', new Date().toISOString())
+        .limit(1);
+
+      if (licenseError) {
+        throw new Error('Unable to verify license');
+      }
+
+      if (!licenseData || licenseData.length === 0) {
+        throw new Error('A verified license is required to book this item');
+      }
+    }
+
     // Create Payment Intent for rental fee (immediate capture)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(booking.total_rental_fee * 100), // Convert to cents

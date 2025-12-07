@@ -11,6 +11,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { CalendarX2, Loader2, Package, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -30,13 +34,8 @@ interface BookingData {
     title: string;
     photo_urls: string[];
     owner_id: string;
-    profiles: {
-      full_name: string;
-    };
   };
-  profiles: {
-    full_name: string;
-  };
+  renter_id: string;
 }
 
 function EmptyState() {
@@ -62,6 +61,12 @@ export default function MyBookingsPage() {
   const [asRenterBookings, setAsRenterBookings] = useState<BookingData[]>([]);
   const [asOwnerBookings, setAsOwnerBookings] = useState<BookingData[]>([]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [damageDialogOpen, setDamageDialogOpen] = useState(false);
+  const [damageTarget, setDamageTarget] = useState<BookingData | null>(null);
+  const [damageAmount, setDamageAmount] = useState('');
+  const [damageNotes, setDamageNotes] = useState('');
+  const [damageFile, setDamageFile] = useState<File | null>(null);
+  const [damageSubmitting, setDamageSubmitting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -80,8 +85,7 @@ export default function MyBookingsPage() {
             id,
             title,
             photo_urls,
-            owner_id,
-            profiles!items_owner_id_fkey (full_name)
+            owner_id
           )
         `)
         .eq('renter_id', user?.id)
@@ -99,8 +103,7 @@ export default function MyBookingsPage() {
             title,
             photo_urls,
             owner_id
-          ),
-          profiles!bookings_renter_id_fkey (full_name)
+          )
         `)
         .eq('items.owner_id', user?.id)
         .order('created_at', { ascending: false });
@@ -155,6 +158,75 @@ export default function MyBookingsPage() {
     }
   };
 
+  const handleNoDamage = (bookingId: string) => {
+    handleConfirmReturn({ bookingId, hasDamage: false });
+  };
+
+  const openDamageDialog = (booking: BookingData) => {
+    setDamageTarget(booking);
+    setDamageAmount('');
+    setDamageNotes('');
+    setDamageFile(null);
+    setDamageDialogOpen(true);
+  };
+
+  const handleDamageSubmit = async () => {
+    if (!damageTarget || !user) return;
+
+    const parsedAmount = parseFloat(damageAmount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      toast({
+        title: 'Invalid amount',
+        description: 'Enter a valid damage amount.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setDamageSubmitting(true);
+    let evidenceUrl: string | null = null;
+
+    try {
+      if (damageFile) {
+        try {
+          const fileExt = damageFile.name.split('.').pop();
+          // Storage RLS expects first folder to be user id for return-evidence bucket
+          const filePath = `${user.id}/${damageTarget.id}-${Date.now()}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage
+            .from('return-evidence')
+            .upload(filePath, damageFile, { upsert: true });
+
+          if (uploadError) throw uploadError;
+
+          const { data: publicUrlData } = supabase.storage
+            .from('return-evidence')
+            .getPublicUrl(filePath);
+
+          evidenceUrl = publicUrlData?.publicUrl || null;
+        } catch (err) {
+          console.error('Evidence upload failed:', err);
+          toast({
+            title: 'Evidence upload failed',
+            description: 'Continuing without photo.',
+            variant: 'destructive',
+          });
+        }
+      }
+
+      await handleConfirmReturn({
+        bookingId: damageTarget.id,
+        hasDamage: true,
+        damageCost: parsedAmount,
+        damageDescription: damageNotes || 'Damage reported',
+        evidenceUrl,
+      });
+
+      setDamageDialogOpen(false);
+    } finally {
+      setDamageSubmitting(false);
+    }
+  };
+
   const handleInitiateReturn = async (bookingId: string) => {
     setActionLoading(bookingId);
     try {
@@ -189,7 +261,19 @@ export default function MyBookingsPage() {
     }
   };
 
-  const handleConfirmReturn = async (bookingId: string, hasDamage: boolean) => {
+  const handleConfirmReturn = async ({
+    bookingId,
+    hasDamage,
+    damageCost,
+    damageDescription,
+    evidenceUrl,
+  }: {
+    bookingId: string;
+    hasDamage: boolean;
+    damageCost?: number | null;
+    damageDescription?: string | null;
+    evidenceUrl?: string | null;
+  }) => {
     setActionLoading(bookingId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -202,8 +286,8 @@ export default function MyBookingsPage() {
         body: JSON.stringify({ 
           bookingId,
           hasDamage,
-          damageDescription: hasDamage ? 'Damage reported' : null,
-          damageCost: hasDamage ? 50 : null, // TODO: Add damage form
+          damageDescription: damageDescription ? `${damageDescription}${evidenceUrl ? `\nEvidence: ${evidenceUrl}` : ''}` : null,
+          damageCost: hasDamage ? damageCost : null,
         }),
       });
 
@@ -244,6 +328,9 @@ export default function MyBookingsPage() {
     const showPickupButton = isOwner && booking.status === 'paid';
     const showReturnButton = !isOwner && booking.status === 'picked_up';
     const showConfirmReturnButton = isOwner && booking.status === 'returned_waiting_owner';
+    const counterparty = isOwner
+      ? (booking.renter_id ? `Renter: ${booking.renter_id}` : 'Renter')
+      : (booking.items?.owner_id ? `Owner: ${booking.items.owner_id}` : 'Owner');
 
     return (
       <Card key={booking.id} className="mb-4">
@@ -260,9 +347,7 @@ export default function MyBookingsPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-semibold text-lg">{booking.items.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {isOwner ? `Renter: ${booking.profiles.full_name}` : `Owner: ${booking.items.profiles.full_name}`}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{counterparty}</p>
                   <p className="text-sm mt-1">
                     {format(new Date(booking.start_datetime), 'MMM d')} - {format(new Date(booking.end_datetime), 'MMM d, yyyy')}
                   </p>
@@ -300,7 +385,7 @@ export default function MyBookingsPage() {
                     <Button
                       size="sm"
                       variant="default"
-                      onClick={() => handleConfirmReturn(booking.id, false)}
+                      onClick={() => handleNoDamage(booking.id)}
                       disabled={actionLoading === booking.id}
                     >
                       {actionLoading === booking.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'No Damage'}
@@ -308,7 +393,7 @@ export default function MyBookingsPage() {
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => handleConfirmReturn(booking.id, true)}
+                      onClick={() => openDamageDialog(booking)}
                       disabled={actionLoading === booking.id}
                     >
                       Report Damage
@@ -332,39 +417,94 @@ export default function MyBookingsPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>My Bookings</CardTitle>
-        <CardDescription>
-          View and manage your rentals.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="renter">
-          <TabsList>
-            <TabsTrigger value="renter">As Renter ({asRenterBookings.length})</TabsTrigger>
-            <TabsTrigger value="owner">As Owner ({asOwnerBookings.length})</TabsTrigger>
-          </TabsList>
-          <TabsContent value="renter">
-            {asRenterBookings.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <div className="space-y-4">
-                {asRenterBookings.map((booking) => renderBookingCard(booking, false))}
-              </div>
-            )}
-          </TabsContent>
-          <TabsContent value="owner">
-            {asOwnerBookings.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <div className="space-y-4">
-                {asOwnerBookings.map((booking) => renderBookingCard(booking, true))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>My Bookings</CardTitle>
+          <CardDescription>
+            View and manage your rentals.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="renter">
+            <TabsList>
+              <TabsTrigger value="renter">As Renter ({asRenterBookings.length})</TabsTrigger>
+              <TabsTrigger value="owner">As Owner ({asOwnerBookings.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="renter">
+              {asRenterBookings.length === 0 ? (
+                <EmptyState />
+              ) : (
+                <div className="space-y-4">
+                  {asRenterBookings.map((booking) => renderBookingCard(booking, false))}
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="owner">
+              {asOwnerBookings.length === 0 ? (
+                <EmptyState />
+              ) : (
+                <div className="space-y-4">
+                  {asOwnerBookings.map((booking) => renderBookingCard(booking, true))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      <Dialog open={damageDialogOpen} onOpenChange={setDamageDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Report Damage</DialogTitle>
+          <DialogDescription>
+            Enter the damage amount and notes. Optionally attach a photo as evidence.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="damage-amount">Damage amount (€)</Label>
+            <Input
+              id="damage-amount"
+              type="number"
+              min="0"
+              step="0.01"
+              value={damageAmount}
+              onChange={(e) => setDamageAmount(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="damage-notes">Notes</Label>
+            <Textarea
+              id="damage-notes"
+              value={damageNotes}
+              onChange={(e) => setDamageNotes(e.target.value)}
+              rows={3}
+              placeholder="Describe the issue..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="damage-file">Photo evidence (optional)</Label>
+            <Input
+              id="damage-file"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setDamageFile(e.target.files?.[0] || null)}
+            />
+            {damageFile && <p className="text-xs text-muted-foreground">Selected: {damageFile.name}</p>}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDamageDialogOpen(false)} disabled={damageSubmitting}>
+            Cancel
+          </Button>
+          <Button onClick={handleDamageSubmit} disabled={damageSubmitting}>
+            {damageSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Submit
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

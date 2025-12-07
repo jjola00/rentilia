@@ -50,8 +50,8 @@ function CheckoutForm({ booking, clientSecrets }: { booking: BookingDetails; cli
     setErrorMessage(null);
 
     try {
-      // Confirm rental fee payment
-      const { error: rentalError } = await stripe.confirmPayment({
+      // Confirm rental fee payment first (immediate capture)
+      const rentalResult = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/bookings/${booking.id}/confirmation`,
@@ -59,15 +59,35 @@ function CheckoutForm({ booking, clientSecrets }: { booking: BookingDetails; cli
         redirect: 'if_required',
       });
 
-      if (rentalError) {
-        // Check if it's a card error that can be retried
-        if (rentalError.type === 'card_error' || rentalError.type === 'validation_error') {
-          throw new Error(rentalError.message);
-        }
-        throw new Error(rentalError.message);
+      if (rentalResult.error) {
+        // Common retryable errors are surfaced here
+        throw new Error(rentalResult.error.message || 'Unable to process rental payment');
       }
 
-      // Update booking status
+      const rentalIntent = rentalResult.paymentIntent;
+      if (!rentalIntent || (rentalIntent.status !== 'succeeded' && rentalIntent.status !== 'processing')) {
+        throw new Error('Rental payment did not complete. Please try again.');
+      }
+
+      // Confirm deposit authorization using the same payment method
+      const depositResult = await stripe.confirmPayment({
+        clientSecret: clientSecrets.deposit,
+        payment_method: rentalIntent.payment_method as string,
+        redirect: 'if_required',
+      });
+
+      if (depositResult.error) {
+        throw new Error(depositResult.error.message || 'Deposit authorization failed. Please try another card.');
+      }
+
+      const depositIntent = depositResult.paymentIntent;
+      // For manual capture deposits, a successful hold will be `requires_capture`
+      const depositOk = depositIntent && (depositIntent.status === 'requires_capture' || depositIntent.status === 'succeeded' || depositIntent.status === 'processing');
+      if (!depositOk) {
+        throw new Error('Deposit authorization did not complete. Please retry.');
+      }
+
+      // Update booking status only after both rental and deposit are confirmed
       const { error: updateError } = await supabase
         .from('bookings')
         .update({ status: 'paid' })

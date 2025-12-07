@@ -45,10 +45,6 @@ serve(async (req) => {
         items (
           owner_id,
           title
-        ),
-        profiles!bookings_renter_id_fkey (
-          full_name,
-          email
         )
       `)
       .eq('id', bookingId)
@@ -56,6 +52,17 @@ serve(async (req) => {
 
     if (bookingError || !booking) {
       throw new Error('Booking not found');
+    }
+
+    // Fetch renter profile separately (avoid FK relationship issues)
+    const { data: renterProfile, error: renterError } = await supabase
+      .from('profiles')
+      .select('full_name,email')
+      .eq('id', booking.renter_id)
+      .single();
+
+    if (renterError || !renterProfile) {
+      throw new Error('Renter profile not found');
     }
 
     // Verify user is the owner
@@ -96,12 +103,12 @@ serve(async (req) => {
         'Authorization': `Bearer ${supabaseServiceKey}`,
       },
       body: JSON.stringify({
-        to: booking.profiles.email,
+        to: renterProfile.email,
         subject: `Pickup Confirmed: ${booking.items.title}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2563eb;">📦 Pickup Confirmed!</h2>
-            <p>Hi ${booking.profiles.full_name},</p>
+            <p>Hi ${renterProfile.full_name},</p>
             <p>The owner has confirmed that you've picked up <strong>${booking.items.title}</strong>.</p>
             
             <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
