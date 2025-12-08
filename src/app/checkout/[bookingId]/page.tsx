@@ -29,7 +29,15 @@ interface BookingDetails {
   };
 }
 
-function CheckoutForm({ booking, clientSecrets }: { booking: BookingDetails; clientSecrets: { rental: string; deposit: string } }) {
+function CheckoutForm({
+  booking,
+  clientSecrets,
+  userEmail,
+}: {
+  booking: BookingDetails;
+  clientSecrets: { rental: string; deposit: string };
+  userEmail?: string | null;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -51,10 +59,18 @@ function CheckoutForm({ booking, clientSecrets }: { booking: BookingDetails; cli
 
     try {
       // Confirm rental fee payment first (immediate capture)
-      const rentalResult = await stripe.confirmPayment({
+       const rentalResult = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/bookings/${booking.id}/confirmation`,
+          // Billing email is optional; customer is created server-side
+          payment_method_data: userEmail
+            ? {
+                billing_details: {
+                  email: userEmail,
+                },
+              }
+            : undefined,
         },
         redirect: 'if_required',
       });
@@ -69,11 +85,14 @@ function CheckoutForm({ booking, clientSecrets }: { booking: BookingDetails; cli
         throw new Error('Rental payment did not complete. Please try again.');
       }
 
+      const rentalPaymentMethodId = rentalIntent.payment_method as string | null;
+      if (!rentalPaymentMethodId) {
+        throw new Error('Payment method was not attached. Please try again.');
+      }
+
       // Confirm deposit authorization using the same payment method
-      const depositResult = await stripe.confirmPayment({
-        clientSecret: clientSecrets.deposit,
-        payment_method: rentalIntent.payment_method as string,
-        redirect: 'if_required',
+      const depositResult = await stripe.confirmCardPayment(clientSecrets.deposit, {
+        payment_method: rentalPaymentMethodId,
       });
 
       if (depositResult.error) {
@@ -268,7 +287,7 @@ export default function CheckoutPage() {
         {/* Left Column - Payment Form */}
         <div className="lg:col-span-2">
           <Elements stripe={stripePromise} options={options}>
-            <CheckoutForm booking={booking} clientSecrets={clientSecrets} />
+            <CheckoutForm booking={booking} clientSecrets={clientSecrets} userEmail={user?.email} />
           </Elements>
         </div>
 

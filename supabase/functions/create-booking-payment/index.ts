@@ -60,6 +60,24 @@ serve(async (req) => {
       throw new Error('Booking is not in requested status');
     }
 
+    // Check if customer already exists for this user
+    let customerId: string | undefined;
+    
+    const existingCustomers = await stripe.customers.list({
+      email: user.email || undefined,
+      limit: 1,
+    });
+
+    if (existingCustomers.data.length > 0) {
+      customerId = existingCustomers.data[0].id;
+    } else {
+      const customer = await stripe.customers.create({
+        email: user.email || undefined,
+        metadata: { supabase_user_id: user.id },
+      });
+      customerId = customer.id;
+    }
+
     // Prevent double-charging rental fee if it is already paid
     if (booking.payment_intent_id) {
       const existingRental = await stripe.paymentIntents.retrieve(booking.payment_intent_id);
@@ -122,10 +140,39 @@ serve(async (req) => {
       }
     }
 
+    // If payment intents already exist and are valid, return them
+    if (booking.payment_intent_id && booking.deposit_pi_id) {
+      try {
+        const existingRental = await stripe.paymentIntents.retrieve(booking.payment_intent_id);
+        const existingDeposit = await stripe.paymentIntents.retrieve(booking.deposit_pi_id);
+        
+        // If both are still usable, return their secrets
+        if (existingRental.client_secret && existingDeposit.client_secret &&
+            !['succeeded', 'canceled'].includes(existingRental.status) &&
+            !['succeeded', 'canceled'].includes(existingDeposit.status)) {
+          return new Response(
+            JSON.stringify({
+              rentalClientSecret: existingRental.client_secret,
+              depositClientSecret: existingDeposit.client_secret,
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200,
+            }
+          );
+        }
+      } catch (e) {
+        // If retrieval fails, create new ones
+        console.log('Existing payment intents not found, creating new ones');
+      }
+    }
+
     // Create Payment Intent for rental fee (immediate capture)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(booking.total_rental_fee * 100), // Convert to cents
       currency: 'eur',
+      customer: customerId,
+      setup_future_usage: 'off_session',
       automatic_payment_methods: {
         enabled: true,
       },
@@ -135,8 +182,6 @@ serve(async (req) => {
         renter_id: user.id,
         item_id: booking.item_id,
       },
-    }, {
-      idempotencyKey: `rental_${bookingId}`,
     });
 
     // Create Payment Intent for deposit (manual capture)
@@ -144,6 +189,7 @@ serve(async (req) => {
       amount: Math.round(booking.deposit_amount * 100), // Convert to cents
       currency: 'eur',
       capture_method: 'manual',
+      customer: customerId,
       automatic_payment_methods: {
         enabled: true,
       },
@@ -153,8 +199,6 @@ serve(async (req) => {
         renter_id: user.id,
         item_id: booking.item_id,
       },
-    }, {
-      idempotencyKey: `deposit_${bookingId}`,
     });
 
     // Update booking with payment intent IDs
