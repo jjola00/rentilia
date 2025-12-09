@@ -1,3 +1,2 @@
 - should be able to rent product for 1 day
-- COntinue with google should give you all google options
-- user shold be able to cancel request for bookings 
+- Continue with google should give you all google account options

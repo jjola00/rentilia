@@ -141,26 +141,26 @@
 ## Phase 5: Booking System
 
 ### Create Booking Request
-- [ ] Navigate to an item detail page (not your own)
-- [ ] Click "Request Booking"
-- [ ] Verify redirect to `/bookings/new?itemId=...`
-- [ ] **Select Dates:**
-  - [ ] Click start date on calendar
-  - [ ] Click end date on calendar
-  - [ ] Verify rental days calculation is correct
-- [ ] **Validate Duration:**
-  - [ ] Try selecting dates shorter than minimum rental days
-  - [ ] Verify error message appears
-  - [ ] Try selecting dates longer than maximum rental days
-  - [ ] Verify error message appears
-  - [ ] Select valid date range
-  - [ ] Verify error clears
-- [ ] **Check Cost Breakdown:**
-  - [ ] Verify rental fee = price_per_day × days
-  - [ ] Verify security deposit displays
-  - [ ] Verify total = rental fee + deposit
-- [ ] Click "Proceed to Payment"
-- [ ] Verify redirect to checkout page
+- [x] Navigate to an item detail page (not your own)
+- [x] Click "Request Booking"
+- [x] Verify redirect to `/bookings/new?itemId=...`
+- [x] **Select Dates:**
+  - [x] Click start date on calendar
+  - [x] Click end date on calendar
+  - [x] Verify rental days calculation is correct
+- [x] **Validate Duration:**
+  - [x] Try selecting dates shorter than minimum rental days
+  - [x] Verify error message appears
+  - [x] Try selecting dates longer than maximum rental days
+  - [x] Verify error message appears
+  - [x] Select valid date range
+  - [x] Verify error clears
+- [x] **Check Cost Breakdown:**
+  - [x] Verify rental fee = price_per_day × days
+  - [x] Verify security deposit displays
+  - [x] Verify total = rental fee + deposit
+- [x] Click "Proceed to Payment"
+- [x] Verify redirect to checkout page
 
 ### License Verification (if item requires license)
 - [ ] Try to book an item that requires a license
@@ -177,21 +177,21 @@
 ## Phase 6: Payment Integration
 
 ### Checkout Process
-- [ ] On checkout page, verify booking summary displays:
-  - [ ] Item photo and title
-  - [ ] Booking dates
-  - [ ] Rental fee
-  - [ ] Security deposit
-  - [ ] Total amount
-- [ ] **Enter Payment Details:**
-  - [ ] Use Stripe test card: `4242 4242 4242 4242`
-  - [ ] Enter any future expiry date (e.g., 12/34)
-  - [ ] Enter any 3-digit CVC (e.g., 123)
-  - [ ] Enter any ZIP code (e.g., 12345)
-- [ ] Click "Pay $X.XX"
-- [ ] Verify processing indicator shows
-- [ ] Verify success message appears
-- [ ] Verify redirect to confirmation page
+- [x] On checkout page, verify booking summary displays:
+  - [x] Item photo and title
+  - [x] Booking dates
+  - [x] Rental fee
+  - [x] Security deposit
+  - [x] Total amount
+- [x] **Enter Payment Details:**
+  - [x] Use Stripe test card: `4242 4242 4242 4242`
+  - [x] Enter any future expiry date (e.g., 12/34)
+  - [x] Enter any 3-digit CVC (e.g., 123)
+  - [x] Enter any ZIP code (e.g., 12345)
+- [x] Click "Pay $X.XX"
+- [x] Verify processing indicator shows
+- [x] Verify success message appears
+- [x] Verify redirect to confirmation page
 
 ### Payment Failure Handling
 - [ ] Return to checkout page
@@ -203,9 +203,16 @@
 - [ ] Use valid test card and complete payment
 
 ### Booking Status Updates
-- [ ] After successful payment, check Supabase dashboard
-- [ ] Verify booking status changed from "requested" to "paid"
-- [ ] Verify `payment_intent_id` and `deposit_pi_id` are populated
+- [x] After successful payment, check Supabase dashboard
+- [x] Verify booking status changed from "requested" to "paid"
+- [x] Verify `payment_intent_id` and `deposit_pi_id` are populated
+
+### Return & Deposit Handling
+- [x] Owner confirms pickup from dashboard
+- [x] Renter marks item as returned
+- [x] Owner confirms return with no damage → deposit released
+- [x] Owner reports damage with amount/notes/evidence → deposit capture succeeds
+- [ ] Verify booking history/status is visible in a detail view (missing UI)
 
 ## Phase 7: Webhook Processing
 
