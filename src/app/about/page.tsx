@@ -2,7 +2,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
-import { Banknote, GraduationCap, Handshake, Target, Triangle, Users } from "lucide-react"
+import { Banknote, GraduationCap, Handshake, Target, Triangle, Users, Code } from "lucide-react"
 
 export default function AboutPage() {
   const teamMembers = [
@@ -16,16 +16,15 @@ export default function AboutPage() {
         { icon: Triangle, text: "Laidlaw Research Scholar" },
       ]
     },
-    // Details for the second member can be added here
-    // { 
-    //   name: "John Smith", 
-    //   role: "Lead Developer", 
-    //   avatarId: "user_john",
-    //   achievements: [
-    //     { icon: Code, text: "Lead Developer at Tech Inc." },
-    //     { icon: Cpu, text: "M.S. in Computer Science" },
-    //   ]
-    // },
+    { 
+      name: "Jay Jay Olajitan", 
+      role: "Co-founder & CTO", 
+      avatarId: "user_jay_jay",
+      achievements: [
+        { icon: GraduationCap, text: "Immersive Software Engineering, University of Limerick" },
+        { icon: Code, text: "Full-Stack Developer" },
+      ]
+    },
   ]
 
   const getAvatarUrl = (id: string) => {
