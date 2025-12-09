@@ -1,15 +1,31 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
-import { Handshake, Target, Users } from "lucide-react"
+import { Banknote, GraduationCap, Handshake, Target, Triangle, Users } from "lucide-react"
 
 export default function AboutPage() {
   const teamMembers = [
-    { name: "Jane Doe", role: "Founder & CEO", avatarId: "user_jane" },
-    { name: "John Smith", role: "Lead Developer", avatarId: "user_john" },
-    { name: "Emily Jones", role: "Head of Community", avatarId: "user_emily" },
-    { name: "Michael Brown", role: "Product Manager", avatarId: "user_michael" },
+    { 
+      name: "Oyinkansola Faith Olorunleke", 
+      role: "Founder & CEO", 
+      avatarId: "user_oyinkansola",
+      achievements: [
+        { icon: GraduationCap, text: "Bachelor of Arts, Trinity College Dublin" },
+        { icon: Banknote, text: "Banking Advisor, PTSB" },
+        { icon: Triangle, text: "Laidlaw Research Scholar" },
+      ]
+    },
+    // Details for the second member can be added here
+    // { 
+    //   name: "John Smith", 
+    //   role: "Lead Developer", 
+    //   avatarId: "user_john",
+    //   achievements: [
+    //     { icon: Code, text: "Lead Developer at Tech Inc." },
+    //     { icon: Cpu, text: "M.S. in Computer Science" },
+    //   ]
+    // },
   ]
 
   const getAvatarUrl = (id: string) => {
@@ -78,7 +94,7 @@ export default function AboutPage() {
         {/* Team Section */}
         <section>
           <h2 className="text-3xl font-bold text-center mb-8">Meet the Team</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 justify-center">
             {teamMembers.map((member) => (
               <Card key={member.name} className="text-center">
                 <CardContent className="p-6">
@@ -88,6 +104,17 @@ export default function AboutPage() {
                   </Avatar>
                   <h4 className="text-lg font-semibold">{member.name}</h4>
                   <p className="text-sm text-primary">{member.role}</p>
+                  
+                  {member.achievements && (
+                    <div className="mt-4 pt-4 border-t border-border text-left space-y-3">
+                      {member.achievements.map((achievement, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <achievement.icon className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">{achievement.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
