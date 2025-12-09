@@ -8,7 +8,7 @@ export default function TermsOfServicePage() {
 
         <h2>1. Introduction</h2>
         <p>
-          Welcome to Rentilia ("we", "us", or "our"). These Terms of Service ("Terms") govern your use of our website, located at [Your Website URL], and any related services provided by us (collectively, the "Service"). By accessing or using our Service, you agree to be bound by these Terms. If you do not agree to these Terms, do not use the Service.
+          Welcome to Rentilia ("we", "us", or "our"). These Terms of Service ("Terms") govern your use of our website and any related services provided by us (collectively, the "Service"). By accessing or using our Service, you agree to be bound by these Terms. If you do not agree to these Terms, do not use the Service.
         </p>
 
         <h2>2. The Service</h2>
@@ -62,7 +62,7 @@ export default function TermsOfServicePage() {
 
         <h2>9. Governing Law</h2>
         <p>
-          These Terms shall be governed and construed in accordance with the laws of [Your State/Country], without regard to its conflict of law provisions.
+          These Terms shall be governed and construed in accordance with the laws of Ireland, without regard to its conflict of law provisions.
         </p>
 
         <h2>10. Changes to Terms</h2>
