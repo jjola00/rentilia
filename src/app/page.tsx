@@ -83,12 +83,23 @@ export default function Home() {
   React.useEffect(() => {
     const loadFeatured = async () => {
       const supabase = createClient();
-      const { data, error } = await supabase
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      let query = supabase
         .from('items')
         .select('*')
         .eq('is_available', true)
         .order('created_at', { ascending: false })
         .limit(6);
+      
+      // Exclude user's own listings if logged in
+      if (user) {
+        query = query.neq('owner_id', user.id);
+      }
+
+      const { data, error } = await query;
 
       if (!error && data) {
         setFeaturedItems(data as Item[]);

@@ -14,7 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon, AlertCircle } from 'lucide-react';
 import { bookingRequestSchema, type BookingRequest } from '@/lib/validations/booking';
-import { differenceInDays, format } from 'date-fns';
+import { differenceInDays, format, startOfDay } from 'date-fns';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ItemDetails {
@@ -295,7 +295,7 @@ function BookingFormContent() {
                     mode="single"
                     selected={startDate}
                     onSelect={setStartDate}
-                    disabled={(date) => date < new Date()}
+                    disabled={(date) => startOfDay(date) < startOfDay(new Date())}
                     className="rounded-md border"
                   />
                 </div>
@@ -305,7 +305,7 @@ function BookingFormContent() {
                     mode="single"
                     selected={endDate}
                     onSelect={setEndDate}
-                    disabled={(date) => !startDate || date <= startDate}
+                    disabled={(date) => !startDate || date < startDate}
                     className="rounded-md border"
                   />
                 </div>
