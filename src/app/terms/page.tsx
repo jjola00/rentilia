@@ -8,7 +8,7 @@ export default function TermsOfServicePage() {
 
         <h2>1. Introduction</h2>
         <p>
-          Welcome to Rentilia ("we", "us", or "our"). These Terms of Service ("Terms") govern your use of our website and any related services provided by us (collectively, the "Service"). By accessing or using our Service, you agree to be bound by these Terms. If you do not agree to these Terms, do not use the Service.
+          Welcome to Rentilia. These Terms of Service govern your use of our website and any related services provided by us. By accessing or using our Service, you agree to be bound by these Terms. If you do not agree to these Terms, do not use the Service.
         </p>
 
         <h2>2. The Service</h2>
@@ -39,7 +39,7 @@ export default function TermsOfServicePage() {
         </p>
         <h3>For Owners:</h3>
         <p>
-          We will deduct a service fee from the rental price before remitting the payout to you. Payouts are processed through our third-party payment provider (Stripe) and are subject to their terms.
+          We will deduct a service fee from the rental price before remitting the payout to you. Payouts are processed through our third-party payment provider, Stripe, and are subject to their terms.
         </p>
 
         <h2>6. Damage and Disputes</h2>
