@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { useProfile } from '@/hooks/use-profile';
+import ThemeToggle from '@/components/theme/ThemeToggle';
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -128,6 +129,7 @@ export default function Header() {
               List an Item
             </Link>
           </Button>
+          <ThemeToggle />
           {loading ? null : (user ? <UserMenu /> : <AuthButtons />)}
         </div>
       </div>

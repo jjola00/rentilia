@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 interface UserProfile {
   id: string;
   full_name: string | null;
+  email: string | null;
   avatar_url: string | null;
   phone: string | null;
   city: string | null;
@@ -51,6 +52,7 @@ export function useProfile() {
           const newProfile: Partial<UserProfile> = {
             id: user.id,
             full_name: user.user_metadata?.full_name || null,
+            email: user.email || null,
             avatar_url: user.user_metadata?.avatar_url || null,
             phone: null,
             city: null,
@@ -70,6 +72,17 @@ export function useProfile() {
         }
       } else {
         setProfile(data);
+        if (!data.email && user.email) {
+          supabase
+            .from('profiles')
+            .update({ email: user.email })
+            .eq('id', user.id)
+            .then(({ error: updateError }) => {
+              if (updateError) {
+                console.error('Error updating profile email:', updateError);
+              }
+            });
+        }
       }
     } catch (err) {
       console.error('Error loading profile:', err);
@@ -80,6 +93,7 @@ export function useProfile() {
         setProfile({
           id: user.id,
           full_name: user.user_metadata?.full_name || null,
+          email: user.email || null,
           avatar_url: user.user_metadata?.avatar_url || null,
           phone: null,
           city: null,

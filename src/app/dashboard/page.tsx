@@ -32,11 +32,16 @@ function DashboardPage() {
 
   const fetchStats = async () => {
     setLoading(true);
+    const userId = user?.id;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     // Fetch active listings count
     const { data: listings, error } = await supabase
       .from('items')
       .select('*')
-      .eq('owner_id', user.id)
+      .eq('owner_id', userId)
       .order('created_at', { ascending: false });
     if (!error && listings) {
       setActiveListings(listings.filter((item: any) => item.is_available).length);

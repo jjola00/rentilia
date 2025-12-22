@@ -34,7 +34,9 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingLicense, setUploadingLicense] = useState(false);
+  const [removingLicense, setRemovingLicense] = useState(false);
   const [licenseUrl, setLicenseUrl] = useState('');
+  const [licensePath, setLicensePath] = useState('');
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const licenseInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,6 +64,7 @@ export default function ProfilePage() {
       .maybeSingle(); // Use maybeSingle() instead of single() to handle no results
 
     if (licenseData && licenseData.document_url) {
+      setLicensePath(licenseData.document_url);
       // Create a signed URL for the stored path
       const { data: urlData } = await supabase.storage
         .from('licenses')
@@ -70,6 +73,9 @@ export default function ProfilePage() {
       if (urlData) {
         setLicenseUrl(urlData.signedUrl);
       }
+    } else {
+      setLicenseUrl('');
+      setLicensePath('');
     }
   };
 
@@ -209,6 +215,7 @@ export default function ProfilePage() {
       if (urlError) throw urlError;
 
       setLicenseUrl(urlData.signedUrl);
+      setLicensePath(filePath);
 
       // Check if license already exists
       const { data: existingLicense } = await supabase
@@ -257,6 +264,54 @@ export default function ProfilePage() {
       });
     } finally {
       setUploadingLicense(false);
+    }
+  };
+
+  const handleLicenseRemove = async () => {
+    if (!user || !licensePath) {
+      setLicenseUrl('');
+      setLicensePath('');
+      return;
+    }
+
+    setRemovingLicense(true);
+    try {
+      const { error: deleteError } = await supabase
+        .from('licenses')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (deleteError) throw deleteError;
+
+      const { error: storageError } = await supabase.storage
+        .from('licenses')
+        .remove([licensePath]);
+
+      if (storageError) {
+        console.error('License storage cleanup failed:', storageError);
+        toast({
+          variant: 'destructive',
+          title: 'License removed',
+          description: 'Record removed, but file cleanup failed.',
+        });
+      } else {
+        toast({
+          title: 'License removed',
+          description: 'Your license document has been removed.',
+        });
+      }
+
+      setLicenseUrl('');
+      setLicensePath('');
+    } catch (error) {
+      console.error('Error removing license:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Remove failed',
+        description: 'Failed to remove license document',
+      });
+    } finally {
+      setRemovingLicense(false);
     }
   };
 
@@ -385,9 +440,10 @@ export default function ProfilePage() {
                     <Button
                       size="icon"
                       variant="destructive"
-                      onClick={() => setLicenseUrl('')}
+                      onClick={handleLicenseRemove}
+                      disabled={removingLicense}
                     >
-                      <X className="h-4 w-4" />
+                      {removingLicense ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>

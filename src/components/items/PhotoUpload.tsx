@@ -122,13 +122,39 @@ export function PhotoUpload({ photoUrls, onPhotosChange, maxPhotos = 10 }: Photo
     handleFiles(e.target.files);
   };
 
+  const getObjectPathFromUrl = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      const publicPrefix = '/storage/v1/object/public/item-photos/';
+      const signedPrefix = '/storage/v1/object/sign/item-photos/';
+
+      if (parsed.pathname.startsWith(publicPrefix)) {
+        return parsed.pathname.slice(publicPrefix.length);
+      }
+
+      if (parsed.pathname.startsWith(signedPrefix)) {
+        return parsed.pathname.slice(signedPrefix.length);
+      }
+    } catch {
+      // Ignore parse errors and fall back to string splitting.
+    }
+
+    const parts = url.split('/item-photos/');
+    if (parts.length > 1) {
+      return parts[1].split('?')[0];
+    }
+
+    return null;
+  };
+
   const removePhoto = async (url: string) => {
     try {
-      // Extract file path from URL
-      const urlParts = url.split('/');
-      const filePath = `item-photos/${urlParts[urlParts.length - 1]}`;
+      const objectPath = getObjectPathFromUrl(url);
+      if (!objectPath) {
+        throw new Error('Unable to determine file path');
+      }
 
-  await supabase.storage.from('item-photos').remove([filePath]);
+      await supabase.storage.from('item-photos').remove([objectPath]);
 
       onPhotosChange(photoUrls.filter((u) => u !== url));
 

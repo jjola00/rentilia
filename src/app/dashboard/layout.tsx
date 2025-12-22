@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { useProfile } from '@/hooks/use-profile';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import ThemeToggle from '@/components/theme/ThemeToggle';
 
 export default function DashboardLayout({
   children,
@@ -112,6 +113,9 @@ export default function DashboardLayout({
                   </Link>
               </Button>
               <h1 className="text-lg font-semibold font-headline">Dashboard</h1>
+            </div>
+            <div className="ml-auto">
+              <ThemeToggle />
             </div>
           </header>
           <main className="p-6">{children}</main>
