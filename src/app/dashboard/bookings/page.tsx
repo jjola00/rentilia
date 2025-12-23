@@ -36,6 +36,13 @@ interface BookingData {
     owner_id: string;
   };
   renter_id: string;
+  booking_photos?: {
+    id: string;
+    photo_url: string;
+    photo_type: 'pickup' | 'return';
+    uploaded_by: string;
+    created_at: string;
+  }[];
 }
 
 function EmptyState() {
@@ -67,6 +74,11 @@ export default function MyBookingsPage() {
   const [damageNotes, setDamageNotes] = useState('');
   const [damageFile, setDamageFile] = useState<File | null>(null);
   const [damageSubmitting, setDamageSubmitting] = useState(false);
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const [photoTarget, setPhotoTarget] = useState<BookingData | null>(null);
+  const [photoType, setPhotoType] = useState<'pickup' | 'return'>('pickup');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoSubmitting, setPhotoSubmitting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -86,6 +98,13 @@ export default function MyBookingsPage() {
             title,
             photo_urls,
             owner_id
+          ),
+          booking_photos (
+            id,
+            photo_url,
+            photo_type,
+            uploaded_by,
+            created_at
           )
         `)
         .eq('renter_id', user?.id)
@@ -103,6 +122,13 @@ export default function MyBookingsPage() {
             title,
             photo_urls,
             owner_id
+          ),
+          booking_photos (
+            id,
+            photo_url,
+            photo_type,
+            uploaded_by,
+            created_at
           )
         `)
         .eq('items.owner_id', user?.id)
@@ -227,6 +253,82 @@ export default function MyBookingsPage() {
     }
   };
 
+  const openPhotoDialog = (booking: BookingData, type: 'pickup' | 'return') => {
+    setPhotoTarget(booking);
+    setPhotoType(type);
+    setPhotoFile(null);
+    setPhotoDialogOpen(true);
+  };
+
+  const uploadBookingPhoto = async (bookingId: string, type: 'pickup' | 'return', file: File) => {
+    if (!user) throw new Error('User not authenticated');
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${bookingId}-${type}-${Date.now()}.${fileExt}`;
+    const filePath = `${bookingId}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('booking-photos')
+      .upload(filePath, file, { upsert: false });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('booking-photos')
+      .getPublicUrl(filePath);
+
+    const { error: insertError } = await supabase
+      .from('booking_photos')
+      .insert({
+        booking_id: bookingId,
+        uploaded_by: user.id,
+        photo_url: data.publicUrl,
+        photo_type: type,
+      });
+
+    if (insertError) throw insertError;
+  };
+
+  const handlePhotoSubmit = async () => {
+    if (!photoTarget || !user) return;
+
+    if (photoType === 'pickup' && !photoFile) {
+      toast({
+        title: 'Photo required',
+        description: 'Select a pickup photo or cancel.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setPhotoSubmitting(true);
+    try {
+      if (photoFile) {
+        await uploadBookingPhoto(photoTarget.id, photoType, photoFile);
+      }
+
+      if (photoType === 'return') {
+        await handleInitiateReturn(photoTarget.id);
+      } else {
+        toast({
+          title: 'Photo uploaded',
+          description: 'Pickup photo saved successfully.',
+        });
+        loadBookings();
+      }
+
+      setPhotoDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error uploading photo:', error);
+      toast({
+        title: 'Upload failed',
+        description: error.message || 'Could not upload photo.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPhotoSubmitting(false);
+    }
+  };
+
   const handleInitiateReturn = async (bookingId: string) => {
     setActionLoading(bookingId);
     try {
@@ -327,10 +429,13 @@ export default function MyBookingsPage() {
   const renderBookingCard = (booking: BookingData, isOwner: boolean) => {
     const showPickupButton = isOwner && booking.status === 'paid';
     const showReturnButton = !isOwner && booking.status === 'picked_up';
+    const showPickupPhotoButton = !isOwner && booking.status === 'picked_up';
     const showConfirmReturnButton = isOwner && booking.status === 'returned_waiting_owner';
     const counterparty = isOwner
       ? (booking.renter_id ? `Renter: ${booking.renter_id}` : 'Renter')
       : (booking.items?.owner_id ? `Owner: ${booking.items.owner_id}` : 'Owner');
+    const pickupPhotos = booking.booking_photos?.filter((photo) => photo.photo_type === 'pickup') || [];
+    const returnPhotos = booking.booking_photos?.filter((photo) => photo.photo_type === 'return') || [];
 
     return (
       <Card key={booking.id} className="mb-4">
@@ -370,13 +475,23 @@ export default function MyBookingsPage() {
                     Confirm Pickup
                   </Button>
                 )}
+                {showPickupPhotoButton && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openPhotoDialog(booking, 'pickup')}
+                    disabled={photoSubmitting}
+                  >
+                    Upload Pickup Photo
+                  </Button>
+                )}
                 {showReturnButton && (
                   <Button
                     size="sm"
-                    onClick={() => handleInitiateReturn(booking.id)}
-                    disabled={actionLoading === booking.id}
+                    onClick={() => openPhotoDialog(booking, 'return')}
+                    disabled={actionLoading === booking.id || photoSubmitting}
                   >
-                    {actionLoading === booking.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4 mr-1" />}
+                    {actionLoading === booking.id || photoSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4 mr-1" />}
                     Mark as Returned
                   </Button>
                 )}
@@ -401,6 +516,41 @@ export default function MyBookingsPage() {
                   </>
                 )}
               </div>
+
+              {(pickupPhotos.length > 0 || returnPhotos.length > 0) && (
+                <div className="mt-4 space-y-3">
+                  {pickupPhotos.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Pickup Photos</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {pickupPhotos.map((photo) => (
+                          <img
+                            key={photo.id}
+                            src={photo.photo_url}
+                            alt="Pickup condition"
+                            className="h-16 w-20 rounded-md object-cover"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {returnPhotos.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Return Photos</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {returnPhotos.map((photo) => (
+                          <img
+                            key={photo.id}
+                            src={photo.photo_url}
+                            alt="Return condition"
+                            className="h-16 w-20 rounded-md object-cover"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
@@ -505,6 +655,43 @@ export default function MyBookingsPage() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+      <Dialog open={photoDialogOpen} onOpenChange={setPhotoDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{photoType === 'pickup' ? 'Upload Pickup Photo' : 'Return Photo (Optional)'}</DialogTitle>
+            <DialogDescription>
+              {photoType === 'pickup'
+                ? 'Upload a photo of the item condition when you receive it.'
+                : 'Upload a photo of the item when returning it.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="booking-photo">Photo</Label>
+              <Input
+                id="booking-photo"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+              />
+              {photoFile && <p className="text-xs text-muted-foreground">Selected: {photoFile.name}</p>}
+              {photoType === 'return' && (
+                <p className="text-xs text-muted-foreground">You can skip this and submit without a photo.</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPhotoDialogOpen(false)} disabled={photoSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={handlePhotoSubmit} disabled={photoSubmitting}>
+              {photoSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {photoType === 'return' ? 'Submit Return' : 'Upload Photo'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

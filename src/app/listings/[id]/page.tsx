@@ -128,6 +128,15 @@ export default function ItemDetailPage() {
     router.push(`/bookings/new?itemId=${params.id}`);
   };
 
+  const handleMessageOwner = () => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    router.push(`/messages?userId=${item?.owner_id}`);
+  };
+
   const startEditing = () => {
     if (item) {
       setEditForm({
@@ -501,14 +510,23 @@ export default function ItemDetailPage() {
                       </p>
                     </div>
                   ) : (
-                    <Button
-                      className="w-full"
-                      size="lg"
-                      onClick={handleRequestBooking}
-                      disabled={!item.is_available}
-                    >
-                      {item.is_available ? 'Request Booking' : 'Currently Unavailable'}
-                    </Button>
+                    <div className="space-y-2">
+                      <Button
+                        className="w-full"
+                        size="lg"
+                        onClick={handleRequestBooking}
+                        disabled={!item.is_available}
+                      >
+                        {item.is_available ? 'Request Booking' : 'Currently Unavailable'}
+                      </Button>
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={handleMessageOwner}
+                      >
+                        Message Owner
+                      </Button>
+                    </div>
                   )}
 
                   <div className="pt-4 space-y-2 text-sm text-muted-foreground">

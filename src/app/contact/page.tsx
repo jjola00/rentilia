@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,24 +10,103 @@ import { Textarea } from "@/components/ui/textarea"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@/lib/auth/AuthProvider"
 
 export default function ContactPage() {
   const { toast } = useToast()
+  const { user } = useAuth()
+  const supabase = createClient()
   const [loading, setLoading] = useState(false)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [subject, setSubject] = useState('')
+  const [message, setMessage] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (user?.email && !email) {
+      setEmail(user.email)
+    }
+  }, [user?.email, email])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!name.trim() || !email.trim() || !subject.trim() || !message.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Missing info",
+        description: "Please fill out all fields before sending.",
+      })
+      return
+    }
+
     setLoading(true)
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
+
+    try {
+      const { error } = await supabase
+        .from("contact_messages")
+        .insert({
+          name: name.trim(),
+          email: email.trim(),
+          subject: subject.trim(),
+          message: message.trim(),
+          user_id: user?.id ?? null,
+        })
+
+      if (error) {
+        throw error
+      }
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      if (supabaseUrl) {
+        const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            to: "jjolajitan2006@gmail.com",
+            subject: `Contact: ${subject.trim()}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2>New Contact Message</h2>
+                <p><strong>Name:</strong> ${name.trim()}</p>
+                <p><strong>Email:</strong> ${email.trim()}</p>
+                <p><strong>Subject:</strong> ${subject.trim()}</p>
+                <p><strong>Message:</strong></p>
+                <p>${message.trim().replace(/\n/g, "<br />")}</p>
+              </div>
+            `,
+          }),
+        })
+
+        if (!response.ok) {
+          console.error("Contact email failed:", await response.text())
+          toast({
+            variant: "destructive",
+            title: "Email failed",
+            description: "Message saved, but notification email failed.",
+          })
+        }
+      }
+
       toast({
         title: "Message Sent!",
         description: "Thank you for contacting us. We'll get back to you shortly.",
       })
-      // Here you would typically reset the form
-    }, 1500)
+      setName('')
+      setSubject('')
+      setMessage('')
+    } catch (error) {
+      console.error("Contact submission error:", error)
+      toast({
+        variant: "destructive",
+        title: "Send failed",
+        description: "Could not send your message. Please try again.",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -51,19 +130,49 @@ export default function ContactPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" placeholder="Jane Doe" required disabled={loading} />
+                  <Input
+                    id="name"
+                    placeholder="Jane Doe"
+                    required
+                    disabled={loading}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="jane.doe@example.com" required disabled={loading} />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="jane.doe@example.com"
+                    required
+                    disabled={loading}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="subject">Subject</Label>
-                  <Input id="subject" placeholder="e.g., Question about a listing" required disabled={loading} />
+                  <Input
+                    id="subject"
+                    placeholder="e.g., Question about a listing"
+                    required
+                    disabled={loading}
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="message">Message</Label>
-                  <Textarea id="message" rows={5} placeholder="Your message here..." required disabled={loading} />
+                  <Textarea
+                    id="message"
+                    rows={5}
+                    placeholder="Your message here..."
+                    required
+                    disabled={loading}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                  />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? (

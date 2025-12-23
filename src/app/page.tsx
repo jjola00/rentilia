@@ -136,7 +136,7 @@ export default function Home() {
             <div className="relative flex-grow">
               <Input
                 type="text"
-                placeholder="Location (e.g., 'New York, NY')"
+                placeholder="Location (e.g., 'Dublin, IE')"
                 className="h-12 pl-10 text-base"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}

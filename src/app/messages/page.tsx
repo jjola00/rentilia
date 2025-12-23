@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ export default function MessagesPage() {
   const supabase = createClient();
   const { user } = useAuth();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
@@ -44,11 +46,47 @@ export default function MessagesPage() {
   const [newRecipientEmail, setNewRecipientEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const preselectUserId = searchParams.get('userId');
 
   useEffect(() => {
     if (!user) return;
     loadMessages();
   }, [user?.id]);
+
+  const ensureProfile = async (userId: string) => {
+    if (!userId || profiles[userId]) {
+      setSelectedUserId(userId);
+      return;
+    }
+
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('id,full_name,avatar_url')
+        .eq('id', userId)
+        .single();
+
+      if (error || !profile) {
+        throw new Error('Profile not found');
+      }
+
+      setProfiles((prev) => ({ ...prev, [profile.id]: profile }));
+      setSelectedUserId(profile.id);
+    } catch (err) {
+      console.error('Error loading profile:', err);
+      toast({
+        title: 'Unable to start chat',
+        description: 'Could not load that user profile.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!user || !preselectUserId) return;
+    if (preselectUserId === user.id) return;
+    ensureProfile(preselectUserId);
+  }, [preselectUserId, user?.id]);
 
   const loadMessages = async () => {
     if (!user) return;
@@ -108,14 +146,21 @@ export default function MessagesPage() {
       grouped[otherId].push(m);
     });
 
-    return Object.entries(grouped).map(([otherId, msgs]) => ({
+    const list = Object.entries(grouped).map(([otherId, msgs]) => ({
       user: profiles[otherId] || { id: otherId, full_name: 'User', avatar_url: null },
       messages: msgs.sort(
         (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       ),
       unread: msgs.filter((m) => m.recipient_id === user?.id).length,
     }));
-  }, [messages, profiles, user?.id]);
+
+    if (selectedUserId && !list.some((c) => c.user.id === selectedUserId)) {
+      const fallbackUser = profiles[selectedUserId] || { id: selectedUserId, full_name: 'User', avatar_url: null };
+      list.unshift({ user: fallbackUser, messages: [], unread: 0 });
+    }
+
+    return list;
+  }, [messages, profiles, user?.id, selectedUserId]);
 
   useEffect(() => {
     if (!selectedUserId && conversations.length > 0) {
