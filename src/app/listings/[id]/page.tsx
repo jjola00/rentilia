@@ -41,6 +41,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
+import Rating from '@/components/shared/rating';
 
 interface ItemDetails {
   id: string;
@@ -68,6 +69,19 @@ interface OwnerProfile {
   city: string | null;
 }
 
+interface ItemReview {
+  id: string;
+  item_rating: number;
+  user_rating: number;
+  comment: string | null;
+  created_at: string;
+  reviewer_id: string;
+  profiles?: {
+    full_name: string | null;
+    avatar_url: string | null;
+  } | null;
+}
+
 export default function ItemDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -77,6 +91,9 @@ export default function ItemDetailPage() {
 
   const [item, setItem] = useState<ItemDetails | null>(null);
   const [owner, setOwner] = useState<OwnerProfile | null>(null);
+  const [itemReviews, setItemReviews] = useState<ItemReview[]>([]);
+  const [itemRating, setItemRating] = useState<number | null>(null);
+  const [ownerRating, setOwnerRating] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -107,6 +124,69 @@ export default function ItemDetailPage() {
       if (ownerError) throw ownerError;
 
       setOwner(ownerData);
+
+      const { data: reviewData, error: reviewError } = await supabase
+        .from('reviews')
+        .select('id,item_rating,user_rating,comment,created_at,reviewer_id')
+        .eq('item_id', itemData.id)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
+
+      if (reviewError) throw reviewError;
+
+      const reviews = (reviewData || []) as ItemReview[];
+      const reviewerIds = Array.from(new Set(reviews.map((review) => review.reviewer_id)));
+
+      if (reviewerIds.length > 0) {
+        const { data: profileRows, error: profileError } = await supabase
+          .from('profiles')
+          .select('id,full_name,avatar_url')
+          .in('id', reviewerIds);
+
+        if (profileError) throw profileError;
+
+        const profileMap = (profileRows || []).reduce<Record<string, ItemReview['profiles']>>(
+          (acc, profile) => {
+            acc[profile.id] = {
+              full_name: profile.full_name,
+              avatar_url: profile.avatar_url,
+            };
+            return acc;
+          },
+          {}
+        );
+
+        setItemReviews(
+          reviews.map((review) => ({
+            ...review,
+            profiles: profileMap[review.reviewer_id] || null,
+          }))
+        );
+      } else {
+        setItemReviews(reviews);
+      }
+
+      if (reviews.length > 0) {
+        const avg = reviews.reduce((sum, review) => sum + review.item_rating, 0) / reviews.length;
+        setItemRating(avg);
+      } else {
+        setItemRating(null);
+      }
+
+      const { data: ownerReviewData, error: ownerReviewError } = await supabase
+        .from('reviews')
+        .select('user_rating')
+        .eq('reviewee_id', itemData.owner_id)
+        .eq('is_published', true);
+
+      if (ownerReviewError) throw ownerReviewError;
+
+      if (ownerReviewData && ownerReviewData.length > 0) {
+        const avgOwner = ownerReviewData.reduce((sum, review) => sum + review.user_rating, 0) / ownerReviewData.length;
+        setOwnerRating(avgOwner);
+      } else {
+        setOwnerRating(null);
+      }
     } catch (error) {
       console.error('Error loading item:', error);
       toast({
@@ -358,6 +438,11 @@ export default function ItemDetailPage() {
                       )}
                     </div>
                     <Badge variant="secondary">{item.category}</Badge>
+                    {itemRating !== null && (
+                      <div className="mt-3">
+                        <Rating rating={itemRating} reviewCount={itemReviews.length} />
+                      </div>
+                    )}
                   </div>
 
                   <Separator />
@@ -421,7 +506,7 @@ export default function ItemDetailPage() {
           <Card>
             <CardContent className="p-6">
               <h2 className="text-lg font-semibold mb-4">Owner</h2>
-              <div className="flex items-center gap-4">
+              <Link href={`/users/${owner.id}`} className="flex items-center gap-4">
                 <Avatar className="h-16 w-16">
                   <AvatarImage src={owner.avatar_url || undefined} alt={owner.full_name} />
                   <AvatarFallback>{ownerInitial}</AvatarFallback>
@@ -433,8 +518,52 @@ export default function ItemDetailPage() {
                       {owner.city}
                     </p>
                   )}
+                  {ownerRating !== null && (
+                    <div className="mt-2">
+                      <Rating rating={ownerRating} />
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">View profile</p>
                 </div>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Reviews</h2>
+                {itemReviews.length > 0 && itemRating !== null && (
+                  <Rating rating={itemRating} reviewCount={itemReviews.length} size="sm" />
+                )}
               </div>
+              {itemReviews.length > 0 ? (
+                <div className="space-y-4">
+                  {itemReviews.map((review) => (
+                    <div key={review.id} className="border rounded-lg p-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={review.profiles?.avatar_url || undefined} />
+                          <AvatarFallback>
+                            {(review.profiles?.full_name || 'U').charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-semibold">
+                            {review.profiles?.full_name || 'User'}
+                          </p>
+                          <Rating rating={review.item_rating} size="sm" />
+                        </div>
+                      </div>
+                      {review.comment && (
+                        <p className="text-sm text-muted-foreground">{review.comment}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No reviews yet.</p>
+              )}
             </CardContent>
           </Card>
         </div>

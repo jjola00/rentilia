@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { CalendarX2, Loader2, Package, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -41,6 +42,17 @@ interface BookingData {
     photo_url: string;
     photo_type: 'pickup' | 'return';
     uploaded_by: string;
+    created_at: string;
+  }[];
+  reviews?: {
+    id: string;
+    reviewer_id: string;
+    reviewee_id: string;
+    reviewer_role: 'renter' | 'owner';
+    item_rating: number;
+    user_rating: number;
+    comment: string | null;
+    is_published: boolean;
     created_at: string;
   }[];
 }
@@ -79,6 +91,12 @@ export default function MyBookingsPage() {
   const [photoType, setPhotoType] = useState<'pickup' | 'return'>('pickup');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoSubmitting, setPhotoSubmitting] = useState(false);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState<BookingData | null>(null);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [itemRating, setItemRating] = useState('5');
+  const [userRating, setUserRating] = useState('5');
+  const [reviewNotes, setReviewNotes] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -105,6 +123,17 @@ export default function MyBookingsPage() {
             photo_type,
             uploaded_by,
             created_at
+          ),
+          reviews (
+            id,
+            reviewer_id,
+            reviewee_id,
+            reviewer_role,
+            item_rating,
+            user_rating,
+            comment,
+            is_published,
+            created_at
           )
         `)
         .eq('renter_id', user?.id)
@@ -128,6 +157,17 @@ export default function MyBookingsPage() {
             photo_url,
             photo_type,
             uploaded_by,
+            created_at
+          ),
+          reviews (
+            id,
+            reviewer_id,
+            reviewee_id,
+            reviewer_role,
+            item_rating,
+            user_rating,
+            comment,
+            is_published,
             created_at
           )
         `)
@@ -329,6 +369,66 @@ export default function MyBookingsPage() {
     }
   };
 
+  const openReviewDialog = (booking: BookingData) => {
+    setReviewTarget(booking);
+    setItemRating('5');
+    setUserRating('5');
+    setReviewNotes('');
+    setReviewDialogOpen(true);
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!reviewTarget || !user) return;
+
+    const parsedItemRating = Number(itemRating);
+    const parsedUserRating = Number(userRating);
+    if (!Number.isFinite(parsedItemRating) || !Number.isFinite(parsedUserRating)) {
+      toast({
+        title: 'Invalid rating',
+        description: 'Please select valid ratings.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setReviewSubmitting(true);
+    try {
+      const isOwner = reviewTarget.items.owner_id === user.id;
+      const revieweeId = isOwner ? reviewTarget.renter_id : reviewTarget.items.owner_id;
+
+      const { error } = await supabase
+        .from('reviews')
+        .insert({
+          booking_id: reviewTarget.id,
+          reviewer_id: user.id,
+          reviewee_id: revieweeId,
+          item_id: reviewTarget.items.id,
+          reviewer_role: isOwner ? 'owner' : 'renter',
+          item_rating: parsedItemRating,
+          user_rating: parsedUserRating,
+          comment: reviewNotes.trim() || null,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Review submitted',
+        description: 'Thanks for sharing your feedback.',
+      });
+      setReviewDialogOpen(false);
+      loadBookings();
+    } catch (error: any) {
+      console.error('Review submit error:', error);
+      toast({
+        title: 'Review failed',
+        description: error.message || 'Could not submit review.',
+        variant: 'destructive',
+      });
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
   const handleInitiateReturn = async (bookingId: string) => {
     setActionLoading(bookingId);
     try {
@@ -431,11 +531,15 @@ export default function MyBookingsPage() {
     const showReturnButton = !isOwner && booking.status === 'picked_up';
     const showPickupPhotoButton = !isOwner && booking.status === 'picked_up';
     const showConfirmReturnButton = isOwner && booking.status === 'returned_waiting_owner';
+    const canReview = booking.status === 'closed_no_damage' || booking.status === 'deposit_captured';
     const counterparty = isOwner
       ? (booking.renter_id ? `Renter: ${booking.renter_id}` : 'Renter')
       : (booking.items?.owner_id ? `Owner: ${booking.items.owner_id}` : 'Owner');
     const pickupPhotos = booking.booking_photos?.filter((photo) => photo.photo_type === 'pickup') || [];
     const returnPhotos = booking.booking_photos?.filter((photo) => photo.photo_type === 'return') || [];
+    const myReview = booking.reviews?.find((review) => review.reviewer_id === user?.id) || null;
+    const otherReview = booking.reviews?.find((review) => review.reviewer_id !== user?.id) || null;
+    const reviewPending = myReview && !otherReview;
 
     return (
       <Card key={booking.id} className="mb-4">
@@ -515,7 +619,25 @@ export default function MyBookingsPage() {
                     </Button>
                   </>
                 )}
+                {canReview && !myReview && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => openReviewDialog(booking)}
+                    disabled={reviewSubmitting}
+                  >
+                    Leave Review
+                  </Button>
+                )}
               </div>
+
+              {myReview && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {reviewPending
+                    ? 'Review submitted. The other person will see it after they review.'
+                    : 'Both reviews submitted.'}
+                </p>
+              )}
 
               {(pickupPhotos.length > 0 || returnPhotos.length > 0) && (
                 <div className="mt-4 space-y-3">
@@ -688,6 +810,68 @@ export default function MyBookingsPage() {
             <Button onClick={handlePhotoSubmit} disabled={photoSubmitting}>
               {photoSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {photoType === 'return' ? 'Submit Return' : 'Upload Photo'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave a Review</DialogTitle>
+            <DialogDescription>
+              Rate the item and the person you rented with.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Item Rating</Label>
+              <Select value={itemRating} onValueChange={setItemRating}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select rating" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[5, 4, 3, 2, 1].map((rating) => (
+                    <SelectItem key={rating} value={rating.toString()}>
+                      {rating} star{rating > 1 ? 's' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>User Rating</Label>
+              <Select value={userRating} onValueChange={setUserRating}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select rating" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[5, 4, 3, 2, 1].map((rating) => (
+                    <SelectItem key={rating} value={rating.toString()}>
+                      {rating} star{rating > 1 ? 's' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="review-notes">Notes</Label>
+              <Textarea
+                id="review-notes"
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                rows={3}
+                placeholder="Share details about the rental..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReviewDialogOpen(false)} disabled={reviewSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleReviewSubmit} disabled={reviewSubmitting}>
+              {reviewSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Submit Review
             </Button>
           </DialogFooter>
         </DialogContent>
