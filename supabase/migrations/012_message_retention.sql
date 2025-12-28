@@ -22,7 +22,7 @@ BEGIN
     PERFORM cron.schedule(
       'delete_old_messages_daily',
       '0 3 * * *',
-      $$select public.delete_old_messages();$$
+      $cron$select public.delete_old_messages();$cron$
     );
   END IF;
 END;

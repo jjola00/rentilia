@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ITEM_CONDITION_VALUES } from '@/lib/constants/item-conditions';
+import { getCategoryValueCap } from '@/lib/constants/category-caps';
 
 export const itemBasicInfoSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters').max(100, 'Title must be less than 100 characters'),
@@ -47,6 +48,16 @@ export const completeItemSchema = itemBasicInfoSchema
   .refine((data) => data.max_rental_days >= data.min_rental_days, {
     message: 'Maximum rental days must be greater than or equal to minimum rental days',
     path: ['max_rental_days'],
+  })
+  .superRefine((data, ctx) => {
+    const cap = getCategoryValueCap(data.category);
+    if (cap && data.replacement_value > cap) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['replacement_value'],
+        message: `Replacement value exceeds €${cap.toLocaleString()} cap for ${data.category}.`,
+      });
+    }
   });
 
 export type ItemBasicInfo = z.infer<typeof itemBasicInfoSchema>;

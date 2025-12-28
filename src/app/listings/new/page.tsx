@@ -33,6 +33,7 @@ import {
   getValueBandForAmount,
   getValueBandLabel,
 } from '@/lib/constants/value-bands';
+import { getCategoryValueCap } from '@/lib/constants/category-caps';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -94,6 +95,8 @@ export default function NewListingPage() {
   const replacementValuePreview = pricingForm.watch('replacement_value');
   const valueBandPreview = getValueBandForAmount(replacementValuePreview);
   const valueBandLabel = getValueBandLabel(valueBandPreview);
+  const categoryCap = getCategoryValueCap(basicInfo?.category || null);
+  const categoryCapLabel = categoryCap ? `€${categoryCap.toLocaleString()}` : null;
 
   const handleStep1Submit = (data: ItemBasicInfo) => {
     setBasicInfo(data);
@@ -101,6 +104,19 @@ export default function NewListingPage() {
   };
 
   const handleStep2Submit = (data: ItemPricing) => {
+    const cap = getCategoryValueCap(basicInfo?.category || null);
+    if (cap && data.replacement_value > cap) {
+      pricingForm.setError('replacement_value', {
+        type: 'manual',
+        message: `Max for ${basicInfo?.category ?? 'this category'} is €${cap.toLocaleString()}.`,
+      });
+      toast({
+        variant: 'destructive',
+        title: 'Replacement value too high',
+        description: `Max for ${basicInfo?.category ?? 'this category'} is €${cap.toLocaleString()}.`,
+      });
+      return;
+    }
     setPricing(data);
     setCurrentStep(3);
   };
@@ -111,11 +127,11 @@ export default function NewListingPage() {
   };
 
   const handleStep4Continue = () => {
-    if (photoUrls.length === 0) {
+    if (photoUrls.length < 4) {
       toast({
         variant: 'destructive',
         title: 'Photos required',
-        description: 'Please upload at least one photo of your item',
+        description: 'Please upload at least 4 photos of your item',
       });
       return;
     }
@@ -132,6 +148,15 @@ export default function NewListingPage() {
       return;
     }
 
+    if (photoUrls.length < 4) {
+      toast({
+        variant: 'destructive',
+        title: 'Photos required',
+        description: 'Please upload at least 4 photos of your item',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     const valueBand = getValueBandForAmount(pricing.replacement_value);
     if (!valueBand) {
@@ -140,6 +165,16 @@ export default function NewListingPage() {
         variant: 'destructive',
         title: 'Invalid replacement value',
         description: 'Please enter a valid replacement value to determine the value band.',
+      });
+      return;
+    }
+    const cap = getCategoryValueCap(basicInfo.category);
+    if (cap && pricing.replacement_value > cap) {
+      setIsSubmitting(false);
+      toast({
+        variant: 'destructive',
+        title: 'Replacement value too high',
+        description: `Max for ${basicInfo.category} is €${cap.toLocaleString()}.`,
       });
       return;
     }
@@ -335,6 +370,11 @@ export default function NewListingPage() {
                 <p className="text-sm text-muted-foreground">
                   Value band (insurance): {valueBandLabel}
                 </p>
+                {categoryCapLabel && basicInfo?.category && (
+                  <p className="text-sm text-muted-foreground">
+                    Max for {basicInfo.category}: {categoryCapLabel}
+                  </p>
+                )}
                 {pricingForm.formState.errors.replacement_value && (
                   <p className="text-sm text-destructive">{pricingForm.formState.errors.replacement_value.message}</p>
                 )}
@@ -442,7 +482,7 @@ export default function NewListingPage() {
         <Card>
           <CardHeader>
             <CardTitle>Photos</CardTitle>
-            <CardDescription>Upload photos of your item (at least 1 required)</CardDescription>
+            <CardDescription>Upload photos of your item (minimum 4 required)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <PhotoUpload
@@ -450,6 +490,9 @@ export default function NewListingPage() {
               onPhotosChange={setPhotoUrls}
               maxPhotos={10}
             />
+            <p className="text-sm text-muted-foreground">
+              Photos uploaded: {photoUrls.length}/4
+            </p>
 
             <div className="flex justify-between">
               <Button type="button" variant="outline" onClick={goBack}>

@@ -9,9 +9,12 @@ import { useAuth } from '@/lib/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, CreditCard, Shield, Lock } from 'lucide-react';
 import { format } from 'date-fns';
+import Link from 'next/link';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -23,6 +26,7 @@ interface BookingDetails {
   total_rental_fee: number;
   deposit_amount: number;
   status: string;
+  agreement_accepted_at?: string | null;
   items: {
     title: string;
     photo_urls: string[];
@@ -46,6 +50,9 @@ function CheckoutForm({
 
   const [processing, setProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const agreementAlreadyAccepted = Boolean(booking.agreement_accepted_at);
+  const [agreementAccepted, setAgreementAccepted] = useState(agreementAlreadyAccepted);
+  const agreementReady = agreementAlreadyAccepted || agreementAccepted;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,10 +61,29 @@ function CheckoutForm({
       return;
     }
 
+    if (!agreementReady) {
+      setErrorMessage('Please accept the rental agreement before payment.');
+      toast({
+        variant: 'destructive',
+        title: 'Agreement required',
+        description: 'Please accept the rental agreement before proceeding to payment.',
+      });
+      return;
+    }
+
     setProcessing(true);
     setErrorMessage(null);
 
     try {
+      if (!booking.agreement_accepted_at) {
+        const { error: agreementError } = await supabase
+          .from('bookings')
+          .update({ agreement_accepted_at: new Date().toISOString() })
+          .eq('id', booking.id);
+
+        if (agreementError) throw agreementError;
+      }
+
       // Confirm rental fee payment first (immediate capture)
        const rentalResult = await stripe.confirmPayment({
         elements,
@@ -156,6 +182,27 @@ function CheckoutForm({
         </div>
       )}
 
+      <div className="rounded-lg border p-4 text-sm">
+        <div className="flex items-start gap-3">
+          <Checkbox
+            id="agreement"
+            checked={agreementReady}
+            disabled={agreementAlreadyAccepted}
+            onCheckedChange={(checked) => {
+              setAgreementAccepted(Boolean(checked));
+              if (checked) setErrorMessage(null);
+            }}
+          />
+          <Label htmlFor="agreement" className="leading-relaxed">
+            I agree to the rental agreement and acknowledge the{' '}
+            <Link href="/terms" className="text-primary underline underline-offset-4">
+              Terms of Service
+            </Link>
+            .
+          </Label>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Lock className="h-4 w-4" />
         <span>Your payment information is secure and encrypted</span>
@@ -165,7 +212,7 @@ function CheckoutForm({
         type="submit"
         size="lg"
         className="w-full"
-        disabled={!stripe || processing}
+        disabled={!stripe || processing || !agreementReady}
       >
         {processing ? (
           <>

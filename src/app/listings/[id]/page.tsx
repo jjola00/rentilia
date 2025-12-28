@@ -16,6 +16,7 @@ import {
   getValueBandLabel,
   type ValueBand,
 } from '@/lib/constants/value-bands';
+import { getCategoryValueCap } from '@/lib/constants/category-caps';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -110,6 +111,9 @@ export default function ItemDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState<Partial<ItemDetails>>({});
+  const currentCategory = editForm.category || item?.category || null;
+  const categoryCap = getCategoryValueCap(currentCategory);
+  const categoryCapLabel = categoryCap ? `€${categoryCap.toLocaleString()}` : null;
 
   useEffect(() => {
     loadItemDetails();
@@ -257,9 +261,20 @@ export default function ItemDetailPage() {
 
     setSaving(true);
     try {
-      const nextValueBand = getValueBandForAmount(
-        editForm.replacement_value ?? item.replacement_value
-      );
+      const nextCategory = editForm.category ?? item.category;
+      const nextReplacementValue = editForm.replacement_value ?? item.replacement_value;
+      const cap = getCategoryValueCap(nextCategory);
+      if (cap && nextReplacementValue > cap) {
+        setSaving(false);
+        toast({
+          variant: 'destructive',
+          title: 'Replacement value too high',
+          description: `Max for ${nextCategory} is €${cap.toLocaleString()}.`,
+        });
+        return;
+      }
+
+      const nextValueBand = getValueBandForAmount(nextReplacementValue);
       if (!nextValueBand) {
         setSaving(false);
         toast({
@@ -651,6 +666,11 @@ export default function ItemDetailPage() {
                         value={editForm.replacement_value || ''}
                         onChange={(e) => setEditForm({ ...editForm, replacement_value: Number(e.target.value) })}
                       />
+                      {categoryCapLabel && currentCategory && (
+                        <p className="text-sm text-muted-foreground">
+                          Max for {currentCategory}: {categoryCapLabel}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </>

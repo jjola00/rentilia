@@ -43,6 +43,12 @@ export default function Footer() {
               >
                 Terms of Service
               </Link>
+              <Link
+                href="/faq"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                FAQ
+              </Link>
           </div>
         </div>
       </div>
