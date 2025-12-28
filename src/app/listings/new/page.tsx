@@ -29,6 +29,10 @@ import { PhotoUpload } from '@/components/items/PhotoUpload';
 
 import { CATEGORIES } from '@/lib/constants/categories';
 import { ITEM_CONDITION_OPTIONS } from '@/lib/constants/item-conditions';
+import {
+  getValueBandForAmount,
+  getValueBandLabel,
+} from '@/lib/constants/value-bands';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -87,6 +91,10 @@ export default function NewListingPage() {
     },
   });
 
+  const replacementValuePreview = pricingForm.watch('replacement_value');
+  const valueBandPreview = getValueBandForAmount(replacementValuePreview);
+  const valueBandLabel = getValueBandLabel(valueBandPreview);
+
   const handleStep1Submit = (data: ItemBasicInfo) => {
     setBasicInfo(data);
     setCurrentStep(2);
@@ -125,6 +133,16 @@ export default function NewListingPage() {
     }
 
     setIsSubmitting(true);
+    const valueBand = getValueBandForAmount(pricing.replacement_value);
+    if (!valueBand) {
+      setIsSubmitting(false);
+      toast({
+        variant: 'destructive',
+        title: 'Invalid replacement value',
+        description: 'Please enter a valid replacement value to determine the value band.',
+      });
+      return;
+    }
 
     try {
       const { data: item, error } = await supabase
@@ -137,6 +155,7 @@ export default function NewListingPage() {
           condition: basicInfo.condition,
           price_per_day: pricing.price_per_day,
           replacement_value: pricing.replacement_value,
+          value_band: valueBand,
           deposit_amount: pricing.deposit_amount,
           min_rental_days: availability.min_rental_days,
           max_rental_days: availability.max_rental_days,
@@ -288,7 +307,7 @@ export default function NewListingPage() {
           <CardContent>
             <form onSubmit={pricingForm.handleSubmit(handleStep2Submit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="price_per_day">Price Per Day ($)</Label>
+                <Label htmlFor="price_per_day">Price Per Day (€)</Label>
                 <Input
                   id="price_per_day"
                   type="number"
@@ -302,7 +321,7 @@ export default function NewListingPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="replacement_value">Replacement Value ($)</Label>
+                <Label htmlFor="replacement_value">Replacement Value (€)</Label>
                 <Input
                   id="replacement_value"
                   type="number"
@@ -313,13 +332,16 @@ export default function NewListingPage() {
                 <p className="text-sm text-muted-foreground">
                   The cost to replace this item if lost or damaged beyond repair
                 </p>
+                <p className="text-sm text-muted-foreground">
+                  Value band (insurance): {valueBandLabel}
+                </p>
                 {pricingForm.formState.errors.replacement_value && (
                   <p className="text-sm text-destructive">{pricingForm.formState.errors.replacement_value.message}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="deposit_amount">Security Deposit ($)</Label>
+                <Label htmlFor="deposit_amount">Security Deposit (€)</Label>
                 <Input
                   id="deposit_amount"
                   type="number"

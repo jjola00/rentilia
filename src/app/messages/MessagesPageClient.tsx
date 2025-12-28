@@ -35,7 +35,7 @@ type Conversation = {
 
 export default function MessagesPageClient() {
   const supabase = createClient();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
   const searchParams = useSearchParams();
 
@@ -136,6 +136,21 @@ export default function MessagesPageClient() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!user || !session?.access_token) return;
+    supabase.realtime.setAuth(session.access_token);
+    const channel = supabase
+      .channel(`user:${user.id}:messages`, { config: { private: true } })
+      .on('broadcast', { event: '*' }, () => {
+        loadMessages();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, session?.access_token]);
 
   const conversations: Conversation[] = useMemo(() => {
     const grouped: Record<string, MessageRow[]> = {};
@@ -342,30 +357,32 @@ export default function MessagesPageClient() {
                   <p className="text-xs text-muted-foreground">Conversation</p>
                 </div>
               </div>
-              <ScrollArea className="flex-1 p-6 space-y-6">
-                {selectedConversation.messages.map((m) => {
-                  const isMine = m.sender_id === user?.id;
-                  return (
-                    <div key={m.id} className={cn('flex items-end gap-3', isMine ? 'justify-end' : 'justify-start')}>
-                      {!isMine && (
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={selectedConversation.user.avatar_url || undefined} />
-                          <AvatarFallback>
-                            {(selectedConversation.user.full_name || 'U').charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      <div
-                        className={cn(
-                          'p-3 rounded-lg max-w-md',
-                          isMine ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
+              <ScrollArea className="flex-1 p-6">
+                <div className="space-y-4">
+                  {selectedConversation.messages.map((m) => {
+                    const isMine = m.sender_id === user?.id;
+                    return (
+                      <div key={m.id} className={cn('flex items-end gap-3', isMine ? 'justify-end' : 'justify-start')}>
+                        {!isMine && (
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={selectedConversation.user.avatar_url || undefined} />
+                            <AvatarFallback>
+                              {(selectedConversation.user.full_name || 'U').charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
                         )}
-                      >
-                        <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                        <div
+                          className={cn(
+                            'p-3 rounded-lg max-w-md',
+                            isMine ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
+                          )}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </ScrollArea>
               <div className="p-4 border-t bg-background">
                 <div className="relative">

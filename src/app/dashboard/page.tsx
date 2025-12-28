@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { DollarSign, Box, CalendarCheck, Users, Plus, Loader2 } from 'lucide-react';
+import { Coins, Box, CalendarCheck, Users, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -51,7 +51,7 @@ function DashboardPage() {
   };
 
   const stats = [
-    { title: 'Total Earnings', value: '$0', icon: DollarSign },
+    { title: 'Total Earnings', value: '€0', icon: Coins },
     { title: 'Active Listings', value: activeListings.toString(), icon: Box },
     { title: 'Active Bookings', value: '0', icon: CalendarCheck },
     { title: 'Total Renters', value: '0', icon: Users },

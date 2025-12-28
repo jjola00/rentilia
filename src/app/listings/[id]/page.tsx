@@ -11,6 +11,11 @@ import {
   ITEM_CONDITION_OPTIONS,
   type ItemCondition,
 } from '@/lib/constants/item-conditions';
+import {
+  getValueBandForAmount,
+  getValueBandLabel,
+  type ValueBand,
+} from '@/lib/constants/value-bands';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -33,7 +38,7 @@ import {
   Calendar,
   Shield,
   Truck,
-  DollarSign,
+  Coins,
   ArrowLeft,
   Edit,
   Save,
@@ -56,6 +61,7 @@ interface ItemDetails {
   condition: ItemCondition;
   price_per_day: number;
   replacement_value: number;
+  value_band: ValueBand;
   deposit_amount: number;
   min_rental_days: number;
   max_rental_days: number;
@@ -251,14 +257,28 @@ export default function ItemDetailPage() {
 
     setSaving(true);
     try {
+      const nextValueBand = getValueBandForAmount(
+        editForm.replacement_value ?? item.replacement_value
+      );
+      if (!nextValueBand) {
+        setSaving(false);
+        toast({
+          variant: 'destructive',
+          title: 'Invalid replacement value',
+          description: 'Please enter a valid replacement value to determine the value band.',
+        });
+        return;
+      }
+
+      const updatePayload = { ...editForm, value_band: nextValueBand };
       const { error } = await supabase
         .from('items')
-        .update(editForm)
+        .update(updatePayload)
         .eq('id', item.id);
 
       if (error) throw error;
 
-      setItem({ ...item, ...editForm } as ItemDetails);
+      setItem({ ...item, ...updatePayload } as ItemDetails);
       setIsEditing(false);
       toast({
         title: 'Success',
@@ -606,7 +626,7 @@ export default function ItemDetailPage() {
                 <>
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="price_per_day">Price per Day ($)</Label>
+                      <Label htmlFor="price_per_day">Price per Day (€)</Label>
                       <Input
                         id="price_per_day"
                         type="number"
@@ -615,7 +635,7 @@ export default function ItemDetailPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="deposit_amount">Security Deposit ($)</Label>
+                      <Label htmlFor="deposit_amount">Security Deposit (€)</Label>
                       <Input
                         id="deposit_amount"
                         type="number"
@@ -624,7 +644,7 @@ export default function ItemDetailPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="replacement_value">Replacement Value ($)</Label>
+                      <Label htmlFor="replacement_value">Replacement Value (€)</Label>
                       <Input
                         id="replacement_value"
                         type="number"
@@ -653,6 +673,10 @@ export default function ItemDetailPage() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Replacement Value</span>
                       <span className="font-medium">€{item.replacement_value}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Value Band</span>
+                      <span className="font-medium">{getValueBandLabel(item.value_band)}</span>
                     </div>
                   </div>
 
@@ -694,7 +718,7 @@ export default function ItemDetailPage() {
                       Secure payment processing
                     </p>
                     <p className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
+                      <Coins className="h-4 w-4" />
                       Deposit refunded after return
                     </p>
                   </div>
