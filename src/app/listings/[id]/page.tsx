@@ -6,6 +6,11 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { CATEGORIES } from '@/lib/constants/categories';
+import {
+  ITEM_CONDITION_LABELS,
+  ITEM_CONDITION_OPTIONS,
+  type ItemCondition,
+} from '@/lib/constants/item-conditions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -48,6 +53,7 @@ interface ItemDetails {
   title: string;
   description: string;
   category: string;
+  condition: ItemCondition;
   price_per_day: number;
   replacement_value: number;
   deposit_amount: number;
@@ -223,6 +229,7 @@ export default function ItemDetailPage() {
         title: item.title,
         description: item.description,
         category: item.category,
+        condition: item.condition,
         price_per_day: item.price_per_day,
         replacement_value: item.replacement_value,
         deposit_amount: item.deposit_amount,
@@ -370,6 +377,24 @@ export default function ItemDetailPage() {
                       </Select>
                     </div>
                     <div>
+                      <Label htmlFor="condition">Condition</Label>
+                      <Select
+                        value={editForm.condition || ''}
+                        onValueChange={(value) => setEditForm({ ...editForm, condition: value as ItemCondition })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select condition" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ITEM_CONDITION_OPTIONS.map((condition) => (
+                            <SelectItem key={condition.value} value={condition.value}>
+                              {condition.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
                       <Label htmlFor="description">Description</Label>
                       <Textarea
                         id="description"
@@ -437,7 +462,12 @@ export default function ItemDetailPage() {
                         <Badge variant="destructive">Unavailable</Badge>
                       )}
                     </div>
-                    <Badge variant="secondary">{item.category}</Badge>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">{item.category}</Badge>
+                      {item.condition && (
+                        <Badge variant="outline">{ITEM_CONDITION_LABELS[item.condition]}</Badge>
+                      )}
+                    </div>
                     {itemRating !== null && (
                       <div className="mt-3">
                         <Rating rating={itemRating} reviewCount={itemReviews.length} />

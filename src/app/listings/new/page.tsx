@@ -28,6 +28,7 @@ import {
 import { PhotoUpload } from '@/components/items/PhotoUpload';
 
 import { CATEGORIES } from '@/lib/constants/categories';
+import { ITEM_CONDITION_OPTIONS } from '@/lib/constants/item-conditions';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -53,6 +54,7 @@ export default function NewListingPage() {
       title: '',
       description: '',
       category: '',
+      condition: 'good',
     },
   });
 
@@ -132,6 +134,7 @@ export default function NewListingPage() {
           title: basicInfo.title,
           description: basicInfo.description,
           category: basicInfo.category,
+          condition: basicInfo.condition,
           price_per_day: pricing.price_per_day,
           replacement_value: pricing.replacement_value,
           deposit_amount: pricing.deposit_amount,
@@ -240,6 +243,28 @@ export default function NewListingPage() {
                 </Select>
                 {basicInfoForm.formState.errors.category && (
                   <p className="text-sm text-destructive">{basicInfoForm.formState.errors.category.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="condition">Condition</Label>
+                <Select
+                  onValueChange={(value) => basicInfoForm.setValue('condition', value as ItemBasicInfo['condition'])}
+                  defaultValue={basicInfoForm.getValues('condition')}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select condition" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ITEM_CONDITION_OPTIONS.map((condition) => (
+                      <SelectItem key={condition.value} value={condition.value}>
+                        {condition.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {basicInfoForm.formState.errors.condition && (
+                  <p className="text-sm text-destructive">{basicInfoForm.formState.errors.condition.message}</p>
                 )}
               </div>
 

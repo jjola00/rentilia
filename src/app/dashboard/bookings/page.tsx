@@ -97,6 +97,8 @@ export default function MyBookingsPage() {
   const [itemRating, setItemRating] = useState('5');
   const [userRating, setUserRating] = useState('5');
   const [reviewNotes, setReviewNotes] = useState('');
+  const [statementStart, setStatementStart] = useState('');
+  const [statementEnd, setStatementEnd] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -429,6 +431,86 @@ export default function MyBookingsPage() {
     }
   };
 
+  const downloadOwnerStatement = () => {
+    if (!asOwnerBookings.length) {
+      toast({
+        title: 'No earnings yet',
+        description: 'There are no bookings to include in the statement.',
+      });
+      return;
+    }
+
+    const start = statementStart || null;
+    const end = statementEnd || null;
+
+    const filtered = asOwnerBookings.filter((booking) => {
+      const endDate = booking.end_datetime?.slice(0, 10);
+      if (!endDate) return false;
+      if (start && endDate < start) return false;
+      if (end && endDate > end) return false;
+      return true;
+    });
+
+    if (!filtered.length) {
+      toast({
+        title: 'No results',
+        description: 'No bookings match that date range.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const headers = [
+      'booking_id',
+      'item_title',
+      'start_date',
+      'end_date',
+      'status',
+      'rental_fee',
+      'deposit_amount',
+      'total_charged',
+    ];
+
+    const csvEscape = (value: string) => {
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+
+    const rows = filtered.map((booking) => {
+      const rentalFee = booking.total_rental_fee ?? 0;
+      const depositAmount = booking.deposit_amount ?? 0;
+      return {
+        booking_id: booking.id,
+        item_title: booking.items?.title || 'Unknown',
+        start_date: format(new Date(booking.start_datetime), 'yyyy-MM-dd'),
+        end_date: format(new Date(booking.end_datetime), 'yyyy-MM-dd'),
+        status: booking.status,
+        rental_fee: rentalFee.toFixed(2),
+        deposit_amount: depositAmount.toFixed(2),
+        total_charged: (rentalFee + depositAmount).toFixed(2),
+      };
+    });
+
+    const csv = [
+      headers.join(','),
+      ...rows.map((row) =>
+        headers.map((header) => csvEscape(String(row[header as keyof typeof row]))).join(',')
+      ),
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const labelStart = start || 'all';
+    const labelEnd = end || 'all';
+    link.href = url;
+    link.download = `rentilia-earnings-${labelStart}-to-${labelEnd}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleInitiateReturn = async (bookingId: string) => {
     setActionLoading(bookingId);
     try {
@@ -691,11 +773,35 @@ export default function MyBookingsPage() {
   return (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle>My Bookings</CardTitle>
-          <CardDescription>
-            View and manage your rentals.
-          </CardDescription>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle>My Bookings</CardTitle>
+            <CardDescription>
+              View and manage your rentals.
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="statement-start">From</Label>
+              <Input
+                id="statement-start"
+                type="date"
+                value={statementStart}
+                onChange={(e) => setStatementStart(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="statement-end">To</Label>
+              <Input
+                id="statement-end"
+                type="date"
+                value={statementEnd}
+                onChange={(e) => setStatementEnd(e.target.value)}
+              />
+            </div>
+            <Button variant="outline" onClick={downloadOwnerStatement}>
+              Download Earnings            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="renter">
