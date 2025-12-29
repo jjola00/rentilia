@@ -44,6 +44,10 @@ interface Item {
   min_rental_days: number;
   max_rental_days: number;
   pickup_type: 'renter_pickup' | 'owner_delivery';
+  is_top_pick?: boolean;
+  profiles?: {
+    city: string | null;
+  } | null;
 }
 
 function BrowsePageContent() {
@@ -155,6 +159,12 @@ function BrowsePageContent() {
   };
 
   const filteredItems = items;
+  const topPicks = React.useMemo(
+    () => filteredItems.filter((item) => item.is_top_pick).slice(0, 6),
+    [filteredItems]
+  );
+  const topPickIds = React.useMemo(() => new Set(topPicks.map((item) => item.id)), [topPicks]);
+  const remainingItems = filteredItems.filter((item) => !topPickIds.has(item.id));
 
 
   return (
@@ -289,10 +299,33 @@ function BrowsePageContent() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
           ) : filteredItems.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredItems.map((item) => (
-                <ItemCard key={item.id} item={item} />
-              ))}
+            <div className="space-y-8">
+              {topPicks.length > 0 && (
+                <section className="space-y-4">
+                  <div>
+                    <h3 className="text-xl font-semibold">Top picks</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Curated listings marked as top picks.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {topPicks.map((item) => (
+                      <ItemCard key={item.id} item={item} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {remainingItems.length > 0 && (
+                <section className="space-y-4">
+                  <h3 className="text-xl font-semibold">All results</h3>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {remainingItems.map((item) => (
+                      <ItemCard key={item.id} item={item} />
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-12 text-center">

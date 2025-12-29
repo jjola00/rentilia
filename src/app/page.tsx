@@ -45,11 +45,13 @@ interface Item {
   is_available: boolean;
   owner_id: string;
   created_at: string;
+  is_top_pick?: boolean;
 }
 
 export default function Home() {
   const [priceRange, setPriceRange] = React.useState([499]);
   // Data fetching will be implemented here. For now, we use an empty array.
+  const [topPickItems, setTopPickItems] = React.useState<Item[]>([]);
   const [featuredItems, setFeaturedItems] = React.useState<Item[]>([]);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [location, setLocation] = React.useState('');
@@ -86,23 +88,36 @@ export default function Home() {
       
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      
-      let query = supabase
+      let topPickQuery = supabase
         .from('items')
         .select('*')
         .eq('is_available', true)
+        .eq('is_top_pick', true)
         .order('created_at', { ascending: false })
         .limit(6);
-      
-      // Exclude user's own listings if logged in
+
+      let featuredQuery = supabase
+        .from('items')
+        .select('*')
+        .eq('is_available', true)
+        .eq('is_top_pick', false)
+        .order('created_at', { ascending: false })
+        .limit(6);
+
       if (user) {
-        query = query.neq('owner_id', user.id);
+        topPickQuery = topPickQuery.neq('owner_id', user.id);
+        featuredQuery = featuredQuery.neq('owner_id', user.id);
       }
 
-      const { data, error } = await query;
+      const [{ data: topPickData, error: topPickError }, { data: featuredData, error: featuredError }] =
+        await Promise.all([topPickQuery, featuredQuery]);
 
-      if (!error && data) {
-        setFeaturedItems(data as Item[]);
+      if (!topPickError && topPickData) {
+        setTopPickItems(topPickData as Item[]);
+      }
+
+      if (!featuredError && featuredData) {
+        setFeaturedItems(featuredData as Item[]);
       }
     };
 
@@ -238,22 +253,39 @@ export default function Home() {
           </Card>
         </aside>
 
-        <main className="md:col-span-3">
-          <h2 className="mb-6 text-3xl font-bold font-headline">
-            Featured Items
-          </h2>
-          {featuredItems.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {featuredItems.map((item) => (
-                <ItemCard key={item.id} item={item} />
-              ))}
-            </div>
-          ) : (
-             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-12 text-center">
-                <PackageSearch className="h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-xl font-semibold">No items to display</h3>
-                <p className="mt-2 text-sm text-muted-foreground">Check back later for featured items, or try a search.</p>
-            </div>
+        <main className="md:col-span-3 space-y-10">
+          {topPickItems.length > 0 && (
+            <section>
+              <h2 className="mb-6 text-3xl font-bold font-headline">Top Picks</h2>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {topPickItems.map((item) => (
+                  <ItemCard key={item.id} item={item} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {(featuredItems.length > 0 || topPickItems.length === 0) && (
+            <section>
+              <h2 className="mb-6 text-3xl font-bold font-headline">
+                Featured Items
+              </h2>
+              {featuredItems.length > 0 ? (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {featuredItems.map((item) => (
+                    <ItemCard key={item.id} item={item} />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-12 text-center">
+                  <PackageSearch className="h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-4 text-xl font-semibold">No items to display</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Check back later for featured items, or try a search.
+                  </p>
+                </div>
+              )}
+            </section>
           )}
         </main>
       </div>

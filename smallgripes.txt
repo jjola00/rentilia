@@ -1,2 +1,0 @@
-Messages should auto update for user when new one is recieved, Not just when sending new one
-Get rid of dollar sign universally, its an irish app dublin based, replace with euro
