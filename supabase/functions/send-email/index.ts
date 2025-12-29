@@ -24,7 +24,7 @@ serve(async (req) => {
   }
 
   try {
-    const { to, subject, html, from = 'Rentilia <noreply@rentilia.com>' }: EmailRequest = await req.json();
+    const { to, subject, html, from = 'Rentilia <onboarding@resend.dev>' }: EmailRequest = await req.json();
 
     if (!to || !subject || !html) {
       throw new Error('Missing required fields: to, subject, html');
