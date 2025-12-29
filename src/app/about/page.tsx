@@ -1,7 +1,6 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
-import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { Banknote, GraduationCap, Handshake, Target, Triangle, Users, Code } from "lucide-react"
 
 export default function AboutPage() {
@@ -9,27 +8,26 @@ export default function AboutPage() {
     { 
       name: "Oyinkansola Faith Olorunleke", 
       role: "Founder & CEO", 
-      avatarId: "user_oyinkansola",
+      avatarSrc: "/team/oyin/pfp.png",
       achievements: [
-        { icon: GraduationCap, text: "Bachelor of Arts, Trinity College Dublin" },
-        { icon: Banknote, text: "Banking Advisor, PTSB" },
-        { icon: Triangle, text: "Laidlaw Research Scholar" },
+        { logoSrc: "/team/oyin/laidlaw.png", text: "Laidlaw Leadership & Research Scholar" },
+        { logoSrc: "/team/oyin/ptsb.png", text: "Banking Customer Service Advisor, permanent tsb" },
+        { logoSrc: "/team/oyin/tcd.png", text: "B.A. Biological & Biomedical Sciences, Trinity College Dublin" },
+        { logoSrc: "/team/oyin/dubair.png", text: "Receptionist, Dublin Airport" },
       ]
     },
     { 
       name: "Jay Jay Olajitan", 
       role: "Co-founder & CTO", 
-      avatarId: "user_jay_jay",
+      avatarSrc: "/team/jay/jjpfp.png",
       achievements: [
-        { icon: GraduationCap, text: "Immersive Software Engineering, University of Limerick" },
-        { icon: Code, text: "Full-Stack Developer" },
+        { logoSrc: "/team/jay/patch.png", text: "Patch Alumni (Summer 2025)" },
+        { logoSrc: "/team/jay/dogpatch.png", text: "Development Intern, Dogpatch Labs" },
+        { logoSrc: "/team/jay/deveire.png", text: "Development Intern, Deveire" },
+        { logoSrc: "/team/jay/ise.png", text: "Immersive Software Engineering, University of Limerick" },
       ]
     },
   ]
-
-  const getAvatarUrl = (id: string) => {
-    return PlaceHolderImages.find((img) => img.id === id)?.imageUrl || ''
-  }
 
   return (
     <div className="bg-background">
@@ -93,12 +91,12 @@ export default function AboutPage() {
         {/* Team Section */}
         <section>
           <h2 className="text-3xl font-bold text-center mb-8">Meet the Team</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 justify-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto justify-items-center">
             {teamMembers.map((member) => (
-              <Card key={member.name} className="text-center">
-                <CardContent className="p-6">
-                  <Avatar className="h-24 w-24 mx-auto mb-4">
-                    <AvatarImage src={getAvatarUrl(member.avatarId)} alt={member.name} />
+              <Card key={member.name} className="text-center w-full max-w-md">
+                <CardContent className="p-8">
+                  <Avatar className="h-28 w-28 mx-auto mb-4">
+                    <AvatarImage src={member.avatarSrc} alt={member.name} />
                     <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <h4 className="text-lg font-semibold">{member.name}</h4>
@@ -108,7 +106,15 @@ export default function AboutPage() {
                     <div className="mt-4 pt-4 border-t border-border text-left space-y-3">
                       {member.achievements.map((achievement, index) => (
                         <div key={index} className="flex items-center gap-3">
-                          <achievement.icon className="h-5 w-5 text-muted-foreground" />
+                          {"logoSrc" in achievement && achievement.logoSrc ? (
+                            <img
+                              src={achievement.logoSrc}
+                              alt={achievement.text}
+                              className="h-6 w-6 rounded-full object-contain"
+                            />
+                          ) : (
+                            <achievement.icon className="h-5 w-5 text-muted-foreground" />
+                          )}
                           <span className="text-sm text-muted-foreground">{achievement.text}</span>
                         </div>
                       ))}
