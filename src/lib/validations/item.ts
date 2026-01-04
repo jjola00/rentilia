@@ -14,7 +14,6 @@ export const itemBasicInfoSchema = z.object({
 export const itemPricingSchema = z.object({
   price_per_day: z.number().min(1, 'Price must be at least €1').max(10000, 'Price must be less than €10,000'),
   replacement_value: z.number().min(1, 'Replacement value must be at least €1').max(1000000, 'Replacement value must be less than €1,000,000'),
-  deposit_amount: z.number().min(0, 'Deposit cannot be negative').max(10000, 'Deposit must be less than €10,000'),
 });
 
 export const itemAvailabilitySchema = z.object({

@@ -28,7 +28,6 @@ interface BookingData {
   start_datetime: string;
   end_datetime: string;
   total_rental_fee: number;
-  deposit_amount: number;
   status: string;
   items: {
     id: string;
@@ -467,7 +466,6 @@ export default function MyBookingsPage() {
       'end_date',
       'status',
       'rental_fee',
-      'deposit_amount',
       'total_charged',
     ];
 
@@ -480,7 +478,6 @@ export default function MyBookingsPage() {
 
     const rows = filtered.map((booking) => {
       const rentalFee = booking.total_rental_fee ?? 0;
-      const depositAmount = booking.deposit_amount ?? 0;
       return {
         booking_id: booking.id,
         item_title: booking.items?.title || 'Unknown',
@@ -488,8 +485,7 @@ export default function MyBookingsPage() {
         end_date: format(new Date(booking.end_datetime), 'yyyy-MM-dd'),
         status: booking.status,
         rental_fee: rentalFee.toFixed(2),
-        deposit_amount: depositAmount.toFixed(2),
-        total_charged: (rentalFee + depositAmount).toFixed(2),
+        total_charged: rentalFee.toFixed(2),
       };
     });
 
@@ -582,7 +578,7 @@ export default function MyBookingsPage() {
 
       toast({
         title: 'Success',
-        description: hasDamage ? 'Return confirmed with damage' : 'Return confirmed, deposit released',
+        description: hasDamage ? 'Return confirmed with damage' : 'Return confirmed',
       });
       loadBookings();
     } catch (error: any) {
@@ -605,7 +601,14 @@ export default function MyBookingsPage() {
       closed_no_damage: 'bg-green-100 text-green-800',
       deposit_captured: 'bg-red-100 text-red-800',
     };
-    return <Badge className={variants[status] || ''}>{status.replace(/_/g, ' ')}</Badge>;
+    const labels: Record<string, string> = {
+      deposit_captured: 'closed (damage reported)',
+    };
+    return (
+      <Badge className={variants[status] || ''}>
+        {(labels[status] || status).replace(/_/g, ' ')}
+      </Badge>
+    );
   };
 
   const renderBookingCard = (booking: BookingData, isOwner: boolean) => {
@@ -646,7 +649,6 @@ export default function MyBookingsPage() {
                 <div className="text-right">
                   {getStatusBadge(booking.status)}
                   <p className="text-sm font-medium mt-2">€{booking.total_rental_fee.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">+€{booking.deposit_amount.toFixed(2)} deposit</p>
                 </div>
               </div>
               

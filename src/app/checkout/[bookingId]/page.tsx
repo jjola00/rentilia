@@ -24,7 +24,6 @@ interface BookingDetails {
   start_datetime: string;
   end_datetime: string;
   total_rental_fee: number;
-  deposit_amount: number;
   status: string;
   agreement_accepted_at?: string | null;
   items: {
@@ -35,11 +34,9 @@ interface BookingDetails {
 
 function CheckoutForm({
   booking,
-  clientSecrets,
   userEmail,
 }: {
   booking: BookingDetails;
-  clientSecrets: { rental: string; deposit: string };
   userEmail?: string | null;
 }) {
   const stripe = useStripe();
@@ -111,28 +108,7 @@ function CheckoutForm({
         throw new Error('Rental payment did not complete. Please try again.');
       }
 
-      const rentalPaymentMethodId = rentalIntent.payment_method as string | null;
-      if (!rentalPaymentMethodId) {
-        throw new Error('Payment method was not attached. Please try again.');
-      }
-
-      // Confirm deposit authorization using the same payment method
-      const depositResult = await stripe.confirmCardPayment(clientSecrets.deposit, {
-        payment_method: rentalPaymentMethodId,
-      });
-
-      if (depositResult.error) {
-        throw new Error(depositResult.error.message || 'Deposit authorization failed. Please try another card.');
-      }
-
-      const depositIntent = depositResult.paymentIntent;
-      // For manual capture deposits, a successful hold will be `requires_capture`
-      const depositOk = depositIntent && (depositIntent.status === 'requires_capture' || depositIntent.status === 'succeeded' || depositIntent.status === 'processing');
-      if (!depositOk) {
-        throw new Error('Deposit authorization did not complete. Please retry.');
-      }
-
-      // Update booking status only after both rental and deposit are confirmed
+      // Update booking status only after payment is confirmed
       const { error: updateError } = await supabase
         .from('bookings')
         .update({ status: 'paid' })
@@ -220,7 +196,7 @@ function CheckoutForm({
             Processing Payment...
           </>
         ) : (
-          `Pay €${(booking.total_rental_fee + booking.deposit_amount).toFixed(2)}`
+          `Pay €${booking.total_rental_fee.toFixed(2)}`
         )}
       </Button>
     </form>
@@ -235,7 +211,7 @@ export default function CheckoutPage() {
   const supabase = createClient();
 
   const [booking, setBooking] = useState<BookingDetails | null>(null);
-  const [clientSecrets, setClientSecrets] = useState<{ rental: string; deposit: string } | null>(null);
+  const [clientSecrets, setClientSecrets] = useState<{ rental: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -288,11 +264,10 @@ export default function CheckoutPage() {
         throw new Error(error.error || 'Failed to create payment');
       }
 
-      const { rentalClientSecret, depositClientSecret } = await response.json();
+      const { rentalClientSecret } = await response.json();
 
       setClientSecrets({
         rental: rentalClientSecret,
-        deposit: depositClientSecret,
       });
     } catch (error: any) {
       console.error('Error:', error);
@@ -334,7 +309,7 @@ export default function CheckoutPage() {
         {/* Left Column - Payment Form */}
         <div className="lg:col-span-2">
           <Elements stripe={stripePromise} options={options}>
-            <CheckoutForm booking={booking} clientSecrets={clientSecrets} userEmail={user?.email} />
+            <CheckoutForm booking={booking} userEmail={user?.email} />
           </Elements>
         </div>
 
@@ -367,23 +342,19 @@ export default function CheckoutPage() {
                   <span className="text-muted-foreground">Rental Fee</span>
                   <span className="font-medium">€{booking.total_rental_fee.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Security Deposit</span>
-                  <span className="font-medium">€{booking.deposit_amount.toFixed(2)}</span>
-                </div>
               </div>
 
               <Separator />
 
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>€{(booking.total_rental_fee + booking.deposit_amount).toFixed(2)}</span>
+                <span>€{booking.total_rental_fee.toFixed(2)}</span>
               </div>
 
               <div className="pt-4 space-y-2 text-sm text-muted-foreground">
                 <p className="flex items-center gap-2">
                   <Shield className="h-4 w-4" />
-                  Deposit refunded after return
+                  Platform fee includes insurance coverage
                 </p>
                 <p className="flex items-center gap-2">
                   <Lock className="h-4 w-4" />

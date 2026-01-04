@@ -35,7 +35,7 @@ export default function TermsOfServicePage() {
         <h2>5. Fees and Payments</h2>
         <h3>For Renters:</h3>
         <p>
-          You agree to pay the rental fee, security deposit, and any applicable taxes for bookings you make. The security deposit is a hold placed on your payment method and will be released after the item is returned in good condition, as confirmed by the owner.
+          You agree to pay the rental fee and any applicable taxes for bookings you make. The platform fee includes insurance coverage for eligible claims.
         </p>
         <h3>For Owners:</h3>
         <p>
@@ -44,7 +44,7 @@ export default function TermsOfServicePage() {
 
         <h2>6. Damage and Disputes</h2>
         <p>
-          Renters are responsible for returning items in the condition they were received. If an item is damaged, lost, or stolen, the owner may claim all or part of the security deposit. Rentilia may assist in mediating disputes but is not obligated to do so and is not liable for any damages or losses.
+          Renters are responsible for returning items in the condition they were received. If an item is damaged, lost, or stolen, the owner may submit a claim with evidence. The platform fee includes insurance coverage for eligible claims. Rentilia may assist in mediating disputes but is not obligated to do so and is not liable for any damages or losses.
         </p>
 
         <h2>7. Termination</h2>

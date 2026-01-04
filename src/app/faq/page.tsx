@@ -5,9 +5,9 @@ const FAQS = [
       'Rentilia lets people list items for rent and book them from nearby owners. Choose dates, pay securely at checkout, and pick up or arrange delivery based on the listing.',
   },
   {
-    question: 'What is the security deposit?',
+    question: 'Is there a security deposit?',
     answer:
-      'The security deposit is a temporary authorization on your payment method. It is released after the item is returned in good condition and the owner confirms the return.',
+      'No. We do not charge a security deposit. Our platform fee includes insurance coverage for eligible claims.',
   },
   {
     question: 'How are replacement values used?',
@@ -17,7 +17,7 @@ const FAQS = [
   {
     question: 'What happens if an item is damaged?',
     answer:
-      'If an item is damaged, the owner can submit a claim with evidence. Rentilia may assist in resolving disputes, and deposit adjustments are made based on the claim outcome.',
+      'If an item is damaged, the owner can submit a claim with evidence. Our platform fee includes insurance coverage for eligible claims, and we may assist with disputes if needed.',
   },
   {
     question: 'Can I cancel a booking?',

@@ -69,7 +69,6 @@ export default function NewListingPage() {
     defaultValues: pricing || {
       price_per_day: 0,
       replacement_value: 0,
-      deposit_amount: 0,
     },
   });
 
@@ -191,7 +190,6 @@ export default function NewListingPage() {
           price_per_day: pricing.price_per_day,
           replacement_value: pricing.replacement_value,
           value_band: valueBand,
-          deposit_amount: pricing.deposit_amount,
           min_rental_days: availability.min_rental_days,
           max_rental_days: availability.max_rental_days,
           pickup_type: availability.pickup_type,
@@ -337,7 +335,7 @@ export default function NewListingPage() {
         <Card>
           <CardHeader>
             <CardTitle>Pricing</CardTitle>
-            <CardDescription>Set your rental rates and deposit</CardDescription>
+            <CardDescription>Set your rental rates</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={pricingForm.handleSubmit(handleStep2Submit)} className="space-y-4">
@@ -377,23 +375,6 @@ export default function NewListingPage() {
                 )}
                 {pricingForm.formState.errors.replacement_value && (
                   <p className="text-sm text-destructive">{pricingForm.formState.errors.replacement_value.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="deposit_amount">Security Deposit (€)</Label>
-                <Input
-                  id="deposit_amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="100.00"
-                  {...pricingForm.register('deposit_amount', { valueAsNumber: true })}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Refundable deposit held during rental (typically 20-50% of replacement value)
-                </p>
-                {pricingForm.formState.errors.deposit_amount && (
-                  <p className="text-sm text-destructive">{pricingForm.formState.errors.deposit_amount.message}</p>
                 )}
               </div>
 

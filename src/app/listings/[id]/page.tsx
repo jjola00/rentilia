@@ -63,7 +63,6 @@ interface ItemDetails {
   price_per_day: number;
   replacement_value: number;
   value_band: ValueBand;
-  deposit_amount: number;
   min_rental_days: number;
   max_rental_days: number;
   pickup_type: string;
@@ -242,7 +241,6 @@ export default function ItemDetailPage() {
         condition: item.condition,
         price_per_day: item.price_per_day,
         replacement_value: item.replacement_value,
-        deposit_amount: item.deposit_amount,
         min_rental_days: item.min_rental_days,
         max_rental_days: item.max_rental_days,
         pickup_address: item.pickup_address,
@@ -650,15 +648,6 @@ export default function ItemDetailPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="deposit_amount">Security Deposit (€)</Label>
-                      <Input
-                        id="deposit_amount"
-                        type="number"
-                        value={editForm.deposit_amount || ''}
-                        onChange={(e) => setEditForm({ ...editForm, deposit_amount: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div>
                       <Label htmlFor="replacement_value">Replacement Value (€)</Label>
                       <Input
                         id="replacement_value"
@@ -686,10 +675,6 @@ export default function ItemDetailPage() {
                   <Separator />
 
                   <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Security Deposit</span>
-                      <span className="font-medium">€{item.deposit_amount}</span>
-                    </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Replacement Value</span>
                       <span className="font-medium">€{item.replacement_value}</span>
@@ -739,7 +724,7 @@ export default function ItemDetailPage() {
                     </p>
                     <p className="flex items-center gap-2">
                       <Coins className="h-4 w-4" />
-                      Deposit refunded after return
+                      Platform fee includes insurance coverage
                     </p>
                   </div>
                 </>

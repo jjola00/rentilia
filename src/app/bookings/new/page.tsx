@@ -21,7 +21,6 @@ interface ItemDetails {
   id: string;
   title: string;
   price_per_day: number;
-  deposit_amount: number;
   min_rental_days: number;
   max_rental_days: number;
   is_license_required: boolean;
@@ -130,14 +129,12 @@ function BookingFormContent() {
   };
 
   const calculateTotalCost = () => {
-    if (!item) return { rentalFee: 0, deposit: 0, total: 0 };
+    if (!item) return { rentalFee: 0, total: 0 };
 
     const days = calculateRentalDays();
     const rentalFee = days * item.price_per_day;
-    const deposit = item.deposit_amount;
-    const total = rentalFee + deposit;
 
-    return { rentalFee, deposit, total };
+    return { rentalFee, total: rentalFee };
   };
 
   const validateDuration = () => {
@@ -181,7 +178,7 @@ function BookingFormContent() {
     setSubmitting(true);
 
     try {
-      const { rentalFee, deposit } = calculateTotalCost();
+      const { rentalFee } = calculateTotalCost();
 
       const { data: booking, error } = await supabase
         .from('bookings')
@@ -191,7 +188,6 @@ function BookingFormContent() {
           start_datetime: startDate.toISOString(),
           end_datetime: endDate.toISOString(),
           total_rental_fee: rentalFee,
-          deposit_amount: deposit,
           status: 'requested',
         })
         .select()
@@ -230,7 +226,7 @@ function BookingFormContent() {
   }
 
   const rentalDays = calculateRentalDays();
-  const { rentalFee, deposit, total } = calculateTotalCost();
+  const { rentalFee, total } = calculateTotalCost();
   const durationError = validateDuration();
   const canProceed = startDate && endDate && !durationError && (!item.is_license_required || hasValidLicense);
 
@@ -352,10 +348,6 @@ function BookingFormContent() {
                       </span>
                       <span className="font-medium">€{rentalFee.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Security Deposit</span>
-                      <span className="font-medium">€{deposit.toFixed(2)}</span>
-                    </div>
                   </div>
 
                   <Separator />
@@ -364,10 +356,6 @@ function BookingFormContent() {
                     <span>Total</span>
                     <span>€{total.toFixed(2)}</span>
                   </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    The security deposit will be refunded after you return the item in good condition.
-                  </p>
 
                   <Button
                     className="w-full"

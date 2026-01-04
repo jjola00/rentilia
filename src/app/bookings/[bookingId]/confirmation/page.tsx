@@ -16,7 +16,6 @@ interface BookingDetails {
   start_datetime: string;
   end_datetime: string;
   total_rental_fee: number;
-  deposit_amount: number;
   status: string;
   items: {
     title: string;
@@ -121,14 +120,10 @@ export default function ConfirmationPage() {
               <span className="text-muted-foreground">Rental Fee</span>
               <span className="font-medium">€{booking.total_rental_fee.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Security Deposit (held)</span>
-              <span className="font-medium">€{booking.deposit_amount.toFixed(2)}</span>
-            </div>
             <Separator />
             <div className="flex justify-between text-lg font-bold">
               <span>Total Paid</span>
-              <span>€{(booking.total_rental_fee + booking.deposit_amount).toFixed(2)}</span>
+              <span>€{booking.total_rental_fee.toFixed(2)}</span>
             </div>
           </div>
 
@@ -137,7 +132,6 @@ export default function ConfirmationPage() {
             <ul className="text-blue-800 space-y-1 list-disc list-inside">
               <li>The owner will confirm your booking</li>
               <li>You'll receive pickup instructions</li>
-              <li>Your deposit will be refunded after you return the item</li>
             </ul>
           </div>
 

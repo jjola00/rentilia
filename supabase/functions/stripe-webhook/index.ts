@@ -73,7 +73,7 @@ serve(async (req) => {
 
         console.log(`Payment succeeded for booking ${bookingId}, type: ${paymentType}`);
 
-        // Only update status when rental fee is paid (not deposit)
+        // Only update status when the rental fee is paid
         if (paymentType === 'rental_fee') {
           // Get booking details with item and user info
           const { data: booking, error: bookingError } = await supabase
@@ -92,34 +92,6 @@ serve(async (req) => {
           if (bookingError) {
             console.error('Error fetching booking:', bookingError);
             throw bookingError;
-          }
-
-          // Validate that the deposit intent exists and is authorized before marking paid
-          let depositIntent: Stripe.PaymentIntent | null = null;
-          let depositOk = false;
-          if (booking.deposit_pi_id) {
-            try {
-              depositIntent = await stripe.paymentIntents.retrieve(booking.deposit_pi_id);
-              depositOk = ['requires_capture', 'processing', 'succeeded'].includes(depositIntent.status);
-            } catch (err) {
-              console.error('Error retrieving deposit intent', err);
-            }
-          }
-
-          if (!depositOk) {
-            const depositStatus = depositIntent?.status || 'missing';
-            console.error(`Deposit not authorized for booking ${bookingId}. Status: ${depositStatus}`);
-            await supabase.from('payment_failures').insert({
-              booking_id: bookingId,
-              payment_intent_id: booking.deposit_pi_id || null,
-              error_message: `Deposit not capturable (status: ${depositStatus})`,
-              failed_at: new Date().toISOString(),
-            });
-            // Stop processing: do not mark as paid until deposit hold exists
-            return new Response(JSON.stringify({ received: true, deposit_ready: false }), {
-              headers: { 'Content-Type': 'application/json' },
-              status: 200,
-            });
           }
 
           // Get renter profile
@@ -189,13 +161,11 @@ serve(async (req) => {
                       <p><strong>Rental Period:</strong><br>${startDate} - ${endDate}</p>
                       <p><strong>Pickup Location:</strong><br>${booking.items.pickup_address}</p>
                       <p><strong>Rental Fee:</strong> €${booking.total_rental_fee.toFixed(2)}</p>
-                      <p><strong>Security Deposit (held):</strong> €${booking.deposit_amount.toFixed(2)}</p>
                     </div>
                     
                     <h3>What's Next?</h3>
                     <ul>
                       <li>Coordinate pickup with the owner</li>
-                      <li>Your deposit will be refunded after you return the item</li>
                     </ul>
                     
                     <p>Happy renting!<br>The Rentilia Team</p>

@@ -82,7 +82,7 @@ serve(async (req) => {
     if (booking.payment_intent_id) {
       const existingRental = await stripe.paymentIntents.retrieve(booking.payment_intent_id);
       if (['succeeded', 'processing', 'requires_capture'].includes(existingRental.status)) {
-        throw new Error('Rental payment already processed. Please contact support to re-authorize the deposit.');
+        throw new Error('Rental payment already processed. Please contact support for help.');
       }
     }
 
@@ -141,19 +141,15 @@ serve(async (req) => {
     }
 
     // If payment intents already exist and are valid, return them
-    if (booking.payment_intent_id && booking.deposit_pi_id) {
+    if (booking.payment_intent_id) {
       try {
         const existingRental = await stripe.paymentIntents.retrieve(booking.payment_intent_id);
-        const existingDeposit = await stripe.paymentIntents.retrieve(booking.deposit_pi_id);
         
-        // If both are still usable, return their secrets
-        if (existingRental.client_secret && existingDeposit.client_secret &&
-            !['succeeded', 'canceled'].includes(existingRental.status) &&
-            !['succeeded', 'canceled'].includes(existingDeposit.status)) {
+        // If the rental intent is still usable, return its secret
+        if (existingRental.client_secret && !['succeeded', 'canceled'].includes(existingRental.status)) {
           return new Response(
             JSON.stringify({
               rentalClientSecret: existingRental.client_secret,
-              depositClientSecret: existingDeposit.client_secret,
             }),
             {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -184,29 +180,11 @@ serve(async (req) => {
       },
     });
 
-    // Create Payment Intent for deposit (manual capture)
-    const depositIntent = await stripe.paymentIntents.create({
-      amount: Math.round(booking.deposit_amount * 100), // Convert to cents
-      currency: 'eur',
-      capture_method: 'manual',
-      customer: customerId,
-      automatic_payment_methods: {
-        enabled: true,
-      },
-      metadata: {
-        booking_id: bookingId,
-        type: 'deposit',
-        renter_id: user.id,
-        item_id: booking.item_id,
-      },
-    });
-
     // Update booking with payment intent IDs
     const { error: updateError } = await supabase
       .from('bookings')
       .update({
         payment_intent_id: paymentIntent.id,
-        deposit_pi_id: depositIntent.id,
       })
       .eq('id', bookingId);
 
@@ -217,7 +195,6 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         rentalClientSecret: paymentIntent.client_secret,
-        depositClientSecret: depositIntent.client_secret,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

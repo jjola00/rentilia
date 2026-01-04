@@ -79,7 +79,7 @@ serve(async (req) => {
     }
 
     if (hasDamage) {
-      // Handle damage case - capture deposit
+      // Handle damage case
       if (!damageCost || damageCost <= 0) {
         throw new Error('Damage cost is required when reporting damage');
       }
@@ -94,27 +94,19 @@ serve(async (req) => {
         });
       }
 
-      // Call manage-deposit function to capture
-      const captureResponse = await fetch(`${supabaseUrl}/functions/v1/manage-deposit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader,
-        },
-        body: JSON.stringify({
-          action: 'capture',
-          bookingId,
-          amount: damageCost,
-        }),
-      });
+      const { error: statusError } = await supabase
+        .from('bookings')
+        .update({
+          status: 'deposit_captured',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', bookingId);
 
-      if (!captureResponse.ok) {
-        const error = await captureResponse.json();
-        throw new Error(`Failed to capture deposit: ${error.error}`);
+      if (statusError) {
+        throw statusError;
       }
 
-      // Send email to renter about deposit capture
-      const refundAmount = booking.deposit_amount - damageCost;
+      // Send email to renter about damage report
       await fetch(`${supabaseUrl}/functions/v1/send-email`, {
         method: 'POST',
         headers: {
@@ -123,22 +115,20 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           to: renterProfile.email,
-          subject: `Deposit Partially Captured: ${booking.items.title}`,
+          subject: `Damage Reported: ${booking.items.title}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #ea580c;">⚠️ Deposit Partially Captured</h2>
+              <h2 style="color: #ea580c;">⚠️ Damage Reported</h2>
               <p>Hi ${renterProfile.full_name},</p>
-              <p>The owner has reported damage to the rented item and captured a portion of your security deposit.</p>
+              <p>The owner has reported damage to the rented item.</p>
               
               <div style="background: #fff7ed; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <h3 style="margin-top: 0;">${booking.items.title}</h3>
-                <p><strong>Original Deposit:</strong> €${booking.deposit_amount.toFixed(2)}</p>
-                <p><strong>Amount Captured:</strong> €${damageCost.toFixed(2)}</p>
-                <p><strong>Amount Refunded:</strong> €${refundAmount.toFixed(2)}</p>
+                <p><strong>Reported Damage:</strong> €${damageCost.toFixed(2)}</p>
                 <p><strong>Reason:</strong><br>${damageDescription || 'Damage reported'}</p>
               </div>
               
-              <p>If you believe this charge is incorrect, please contact the owner or reach out to our support team.</p>
+              <p>Our platform fee includes insurance coverage for eligible claims. We’ll follow up if we need more information.</p>
               <p>The Rentilia Team</p>
             </div>
           `,
@@ -146,32 +136,26 @@ serve(async (req) => {
       });
 
       return new Response(
-        JSON.stringify({ success: true, status: 'deposit_captured', refundAmount }),
+        JSON.stringify({ success: true, status: 'deposit_captured' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
         }
       );
     } else {
-      // No damage - release deposit
-      const releaseResponse = await fetch(`${supabaseUrl}/functions/v1/manage-deposit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader,
-        },
-        body: JSON.stringify({
-          action: 'release',
-          bookingId,
-        }),
-      });
+      const { error: statusError } = await supabase
+        .from('bookings')
+        .update({
+          status: 'closed_no_damage',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', bookingId);
 
-      if (!releaseResponse.ok) {
-        const error = await releaseResponse.json();
-        throw new Error(`Failed to release deposit: ${error.error}`);
+      if (statusError) {
+        throw statusError;
       }
 
-      // Send email to renter about deposit release
+      // Send email to renter about return confirmation
       await fetch(`${supabaseUrl}/functions/v1/send-email`, {
         method: 'POST',
         headers: {
@@ -180,20 +164,18 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           to: renterProfile.email,
-          subject: `Deposit Released: ${booking.items.title}`,
+          subject: `Return Confirmed: ${booking.items.title}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #16a34a;">✅ Deposit Released!</h2>
+              <h2 style="color: #16a34a;">✅ Return Confirmed!</h2>
               <p>Hi ${renterProfile.full_name},</p>
-              <p>Great news! Your security deposit has been released.</p>
+              <p>Great news! The owner has confirmed the return of your rental.</p>
               
               <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <h3 style="margin-top: 0;">${booking.items.title}</h3>
-                <p><strong>Deposit Amount:</strong> €${booking.deposit_amount.toFixed(2)}</p>
-                <p style="color: #16a34a; font-weight: bold;">Status: Released</p>
+                <p style="color: #16a34a; font-weight: bold;">Status: Closed</p>
               </div>
               
-              <p>The hold on your card has been removed. You should see the funds available within 5-7 business days.</p>
               <p>Thank you for taking good care of the item!</p>
               <p>The Rentilia Team</p>
             </div>

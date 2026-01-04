@@ -7,7 +7,6 @@ export const emailTemplates = {
     startDate: string;
     endDate: string;
     totalFee: number;
-    deposit: number;
     pickupAddress: string;
   }) => ({
     subject: `Booking Confirmed: ${data.itemTitle}`,
@@ -22,14 +21,12 @@ export const emailTemplates = {
           <p><strong>Rental Period:</strong><br>${data.startDate} - ${data.endDate}</p>
           <p><strong>Pickup Location:</strong><br>${data.pickupAddress}</p>
           <p><strong>Rental Fee:</strong> €${data.totalFee.toFixed(2)}</p>
-          <p><strong>Security Deposit (held):</strong> €${data.deposit.toFixed(2)}</p>
         </div>
         
         <h3>What's Next?</h3>
         <ul>
           <li>The owner will confirm your booking</li>
           <li>You'll receive pickup instructions</li>
-          <li>Your deposit will be refunded after you return the item</li>
         </ul>
         
         <p>Questions? Reply to this email or contact the owner through the Rentilia app.</p>
@@ -96,22 +93,19 @@ export const emailTemplates = {
   depositReleased: (data: {
     renterName: string;
     itemTitle: string;
-    depositAmount: number;
   }) => ({
-    subject: `Deposit Released: ${data.itemTitle}`,
+    subject: `Return Confirmed: ${data.itemTitle}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #16a34a;">✅ Deposit Released!</h2>
+        <h2 style="color: #16a34a;">✅ Return Confirmed!</h2>
         <p>Hi ${data.renterName},</p>
-        <p>Great news! Your security deposit has been released.</p>
+        <p>Great news! The owner has confirmed the return of your rental.</p>
         
         <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0;">${data.itemTitle}</h3>
-          <p><strong>Deposit Amount:</strong> €${data.depositAmount.toFixed(2)}</p>
-          <p style="color: #16a34a; font-weight: bold;">Status: Released</p>
+          <p style="color: #16a34a; font-weight: bold;">Status: Closed</p>
         </div>
         
-        <p>The hold on your card has been removed. You should see the funds available within 5-7 business days.</p>
         <p>Thank you for taking good care of the item!</p>
         <p>The Rentilia Team</p>
       </div>
@@ -121,27 +115,23 @@ export const emailTemplates = {
   depositCaptured: (data: {
     renterName: string;
     itemTitle: string;
-    depositAmount: number;
     capturedAmount: number;
-    refundAmount: number;
     damageDescription: string;
   }) => ({
-    subject: `Deposit Partially Captured: ${data.itemTitle}`,
+    subject: `Damage Reported: ${data.itemTitle}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #ea580c;">⚠️ Deposit Partially Captured</h2>
+        <h2 style="color: #ea580c;">⚠️ Damage Reported</h2>
         <p>Hi ${data.renterName},</p>
-        <p>The owner has reported damage to the rented item and captured a portion of your security deposit.</p>
+        <p>The owner has reported damage to the rented item.</p>
         
         <div style="background: #fff7ed; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0;">${data.itemTitle}</h3>
-          <p><strong>Original Deposit:</strong> €${data.depositAmount.toFixed(2)}</p>
-          <p><strong>Amount Captured:</strong> €${data.capturedAmount.toFixed(2)}</p>
-          <p><strong>Amount Refunded:</strong> €${data.refundAmount.toFixed(2)}</p>
+          <p><strong>Reported Damage:</strong> €${data.capturedAmount.toFixed(2)}</p>
           <p><strong>Reason:</strong><br>${data.damageDescription}</p>
         </div>
         
-        <p>If you believe this charge is incorrect, please contact the owner or reach out to our support team.</p>
+        <p>Our platform fee includes insurance coverage for eligible claims. We’ll follow up if we need more information.</p>
         <p>The Rentilia Team</p>
       </div>
     `,
@@ -161,7 +151,7 @@ export const emailTemplates = {
         
         <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <p><strong>Return By:</strong> ${data.returnDate}</p>
-          <p>Please return the item on time and in good condition to receive your full deposit refund.</p>
+          <p>Please return the item on time and in good condition.</p>
         </div>
         
         <p>Enjoy your rental!</p>

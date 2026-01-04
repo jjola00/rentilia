@@ -113,7 +113,7 @@ serve(async (req) => {
             
             <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <p><strong>Return By:</strong> ${returnDate}</p>
-              <p>Please return the item on time and in good condition to receive your full deposit refund.</p>
+              <p>Please return the item on time and in good condition.</p>
             </div>
             
             <p>Enjoy your rental!</p>

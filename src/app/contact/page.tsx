@@ -199,13 +199,13 @@ export default function ContactPage() {
             <AccordionItem value="item-1">
               <AccordionTrigger>How does renting work?</AccordionTrigger>
               <AccordionContent>
-                Simply browse for an item you need, select your dates, and request a booking. Once the owner accepts and you complete the payment, you can arrange for pickup. After you're done, return the item and get your security deposit back.
+                Simply browse for an item you need, select your dates, and request a booking. Once the owner accepts and you complete the payment, you can arrange for pickup. After you're done, return the item.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-2">
               <AccordionTrigger>Is it safe to rent on Rentilia?</AccordionTrigger>
               <AccordionContent>
-                Safety is our top priority. We use a secure payment system with Stripe, hold security deposits, and are building a robust review system to ensure community trust. All payments and communications happen through the platform to protect your information.
+                Safety is our top priority. We use a secure payment system with Stripe and a robust review system to ensure community trust. Our platform fee includes insurance coverage for eligible claims. All payments and communications happen through the platform to protect your information.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-3">
@@ -217,7 +217,7 @@ export default function ContactPage() {
             <AccordionItem value="item-4">
               <AccordionTrigger>What happens if an item is damaged?</AccordionTrigger>
               <AccordionContent>
-                Owners can claim a portion or all of the security deposit to cover repair or replacement costs. We encourage renters and owners to communicate directly first. If a resolution can't be reached, our support team can help mediate.
+                Owners can submit a claim with evidence to cover repair or replacement costs. We encourage renters and owners to communicate directly first. If a resolution can't be reached, our support team can help mediate.
               </AccordionContent>
             </AccordionItem>
           </Accordion>
