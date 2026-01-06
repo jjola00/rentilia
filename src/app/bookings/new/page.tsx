@@ -2,8 +2,6 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -13,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon, AlertCircle } from 'lucide-react';
-import { bookingRequestSchema, type BookingRequest } from '@/lib/validations/booking';
 import { differenceInDays, format, startOfDay } from 'date-fns';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -22,10 +19,10 @@ interface ItemDetails {
   title: string;
   price_per_day: number;
   min_rental_days: number;
-  max_rental_days: number;
   is_license_required: boolean;
   photo_urls: string[];
   owner_id: string;
+  service_fee?: number;
 }
 
 function BookingFormContent() {
@@ -129,12 +126,13 @@ function BookingFormContent() {
   };
 
   const calculateTotalCost = () => {
-    if (!item) return { rentalFee: 0, total: 0 };
+    if (!item) return { rentalFee: 0, serviceFee: 0, total: 0 };
 
     const days = calculateRentalDays();
     const rentalFee = days * item.price_per_day;
+    const serviceFee = Math.round(rentalFee * 0.1 * 100) / 100;
 
-    return { rentalFee, total: rentalFee };
+    return { rentalFee, serviceFee, total: rentalFee + serviceFee };
   };
 
   const validateDuration = () => {
@@ -144,10 +142,6 @@ function BookingFormContent() {
 
     if (days < item.min_rental_days) {
       return `Minimum rental period is ${item.min_rental_days} days`;
-    }
-
-    if (days > item.max_rental_days) {
-      return `Maximum rental period is ${item.max_rental_days} days`;
     }
 
     return null;
@@ -178,7 +172,7 @@ function BookingFormContent() {
     setSubmitting(true);
 
     try {
-      const { rentalFee } = calculateTotalCost();
+      const { rentalFee, serviceFee } = calculateTotalCost();
 
       const { data: booking, error } = await supabase
         .from('bookings')
@@ -188,6 +182,7 @@ function BookingFormContent() {
           start_datetime: startDate.toISOString(),
           end_datetime: endDate.toISOString(),
           total_rental_fee: rentalFee,
+          service_fee: serviceFee,
           status: 'requested',
         })
         .select()
@@ -226,7 +221,7 @@ function BookingFormContent() {
   }
 
   const rentalDays = calculateRentalDays();
-  const { rentalFee, total } = calculateTotalCost();
+  const { rentalFee, serviceFee, total } = calculateTotalCost();
   const durationError = validateDuration();
   const canProceed = startDate && endDate && !durationError && (!item.is_license_required || hasValidLicense);
 
@@ -256,7 +251,7 @@ function BookingFormContent() {
                     €{item.price_per_day}/day
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Rental period: {item.min_rental_days}-{item.max_rental_days} days
+                    Minimum rental: {item.min_rental_days} days
                   </p>
                 </div>
               </div>
@@ -347,6 +342,10 @@ function BookingFormContent() {
                         €{item.price_per_day} × {rentalDays} days
                       </span>
                       <span className="font-medium">€{rentalFee.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Service Fee (10%)</span>
+                      <span className="font-medium">€{serviceFee.toFixed(2)}</span>
                     </div>
                   </div>
 

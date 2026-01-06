@@ -16,6 +16,7 @@ interface BookingDetails {
   start_datetime: string;
   end_datetime: string;
   total_rental_fee: number;
+  service_fee: number;
   status: string;
   items: {
     title: string;
@@ -120,10 +121,14 @@ export default function ConfirmationPage() {
               <span className="text-muted-foreground">Rental Fee</span>
               <span className="font-medium">€{booking.total_rental_fee.toFixed(2)}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Service Fee (10%)</span>
+              <span className="font-medium">€{booking.service_fee.toFixed(2)}</span>
+            </div>
             <Separator />
             <div className="flex justify-between text-lg font-bold">
               <span>Total Paid</span>
-              <span>€{booking.total_rental_fee.toFixed(2)}</span>
+              <span>€{(booking.total_rental_fee + booking.service_fee).toFixed(2)}</span>
             </div>
           </div>
 

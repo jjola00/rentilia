@@ -24,6 +24,7 @@ interface BookingDetails {
   start_datetime: string;
   end_datetime: string;
   total_rental_fee: number;
+  service_fee: number;
   status: string;
   agreement_accepted_at?: string | null;
   items: {
@@ -196,7 +197,7 @@ function CheckoutForm({
             Processing Payment...
           </>
         ) : (
-          `Pay €${booking.total_rental_fee.toFixed(2)}`
+          `Pay €${(booking.total_rental_fee + booking.service_fee).toFixed(2)}`
         )}
       </Button>
     </form>
@@ -342,13 +343,17 @@ export default function CheckoutPage() {
                   <span className="text-muted-foreground">Rental Fee</span>
                   <span className="font-medium">€{booking.total_rental_fee.toFixed(2)}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Service Fee (10%)</span>
+                  <span className="font-medium">€{booking.service_fee.toFixed(2)}</span>
+                </div>
               </div>
 
               <Separator />
 
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>€{booking.total_rental_fee.toFixed(2)}</span>
+                <span>€{(booking.total_rental_fee + booking.service_fee).toFixed(2)}</span>
               </div>
 
               <div className="pt-4 space-y-2 text-sm text-muted-foreground">

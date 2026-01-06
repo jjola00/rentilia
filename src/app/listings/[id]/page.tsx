@@ -11,12 +11,6 @@ import {
   ITEM_CONDITION_OPTIONS,
   type ItemCondition,
 } from '@/lib/constants/item-conditions';
-import {
-  getValueBandForAmount,
-  getValueBandLabel,
-  type ValueBand,
-} from '@/lib/constants/value-bands';
-import { getCategoryValueCap } from '@/lib/constants/category-caps';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -61,10 +55,7 @@ interface ItemDetails {
   category: string;
   condition: ItemCondition;
   price_per_day: number;
-  replacement_value: number;
-  value_band: ValueBand;
   min_rental_days: number;
-  max_rental_days: number;
   pickup_type: string;
   is_license_required: boolean;
   pickup_address: string;
@@ -110,9 +101,6 @@ export default function ItemDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState<Partial<ItemDetails>>({});
-  const currentCategory = editForm.category || item?.category || null;
-  const categoryCap = getCategoryValueCap(currentCategory);
-  const categoryCapLabel = categoryCap ? `€${categoryCap.toLocaleString()}` : null;
 
   useEffect(() => {
     loadItemDetails();
@@ -240,9 +228,7 @@ export default function ItemDetailPage() {
         category: item.category,
         condition: item.condition,
         price_per_day: item.price_per_day,
-        replacement_value: item.replacement_value,
         min_rental_days: item.min_rental_days,
-        max_rental_days: item.max_rental_days,
         pickup_address: item.pickup_address,
       });
       setIsEditing(true);
@@ -259,31 +245,7 @@ export default function ItemDetailPage() {
 
     setSaving(true);
     try {
-      const nextCategory = editForm.category ?? item.category;
-      const nextReplacementValue = editForm.replacement_value ?? item.replacement_value;
-      const cap = getCategoryValueCap(nextCategory);
-      if (cap && nextReplacementValue > cap) {
-        setSaving(false);
-        toast({
-          variant: 'destructive',
-          title: 'Replacement value too high',
-          description: `Max for ${nextCategory} is €${cap.toLocaleString()}.`,
-        });
-        return;
-      }
-
-      const nextValueBand = getValueBandForAmount(nextReplacementValue);
-      if (!nextValueBand) {
-        setSaving(false);
-        toast({
-          variant: 'destructive',
-          title: 'Invalid replacement value',
-          description: 'Please enter a valid replacement value to determine the value band.',
-        });
-        return;
-      }
-
-      const updatePayload = { ...editForm, value_band: nextValueBand };
+      const updatePayload = { ...editForm };
       const { error } = await supabase
         .from('items')
         .update(updatePayload)
@@ -436,25 +398,14 @@ export default function ItemDetailPage() {
                         onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="min_rental_days">Min Rental Days</Label>
-                        <Input
-                          id="min_rental_days"
-                          type="number"
-                          value={editForm.min_rental_days || ''}
-                          onChange={(e) => setEditForm({ ...editForm, min_rental_days: Number(e.target.value) })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="max_rental_days">Max Rental Days</Label>
-                        <Input
-                          id="max_rental_days"
-                          type="number"
-                          value={editForm.max_rental_days || ''}
-                          onChange={(e) => setEditForm({ ...editForm, max_rental_days: Number(e.target.value) })}
-                        />
-                      </div>
+                    <div>
+                      <Label htmlFor="min_rental_days">Minimum Rental Days</Label>
+                      <Input
+                        id="min_rental_days"
+                        type="number"
+                        value={editForm.min_rental_days || ''}
+                        onChange={(e) => setEditForm({ ...editForm, min_rental_days: Number(e.target.value) })}
+                      />
                     </div>
                     <div>
                       <Label htmlFor="pickup_address">Pickup Address</Label>
@@ -523,7 +474,7 @@ export default function ItemDetailPage() {
                       <div>
                         <p className="font-medium">Rental Period</p>
                         <p className="text-sm text-muted-foreground">
-                          {item.min_rental_days} - {item.max_rental_days} days
+                        Minimum rental: {item.min_rental_days} days
                         </p>
                       </div>
                     </div>
@@ -647,20 +598,6 @@ export default function ItemDetailPage() {
                         onChange={(e) => setEditForm({ ...editForm, price_per_day: Number(e.target.value) })}
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="replacement_value">Replacement Value (€)</Label>
-                      <Input
-                        id="replacement_value"
-                        type="number"
-                        value={editForm.replacement_value || ''}
-                        onChange={(e) => setEditForm({ ...editForm, replacement_value: Number(e.target.value) })}
-                      />
-                      {categoryCapLabel && currentCategory && (
-                        <p className="text-sm text-muted-foreground">
-                          Max for {currentCategory}: {categoryCapLabel}
-                        </p>
-                      )}
-                    </div>
                   </div>
                 </>
               ) : (
@@ -675,14 +612,6 @@ export default function ItemDetailPage() {
                   <Separator />
 
                   <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Replacement Value</span>
-                      <span className="font-medium">€{item.replacement_value}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Value Band</span>
-                      <span className="font-medium">{getValueBandLabel(item.value_band)}</span>
-                    </div>
                   </div>
 
                   <Separator />

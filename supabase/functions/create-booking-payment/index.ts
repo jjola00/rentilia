@@ -99,10 +99,6 @@ serve(async (req) => {
       throw new Error(`Minimum rental period is ${booking.items.min_rental_days} days`);
     }
 
-    if (booking.items?.max_rental_days && rentalDays > booking.items.max_rental_days) {
-      throw new Error(`Maximum rental period is ${booking.items.max_rental_days} days`);
-    }
-
     // Ensure no overlapping bookings for this item
     const { data: overlappingBookings, error: overlapError } = await supabase
       .from('bookings')
@@ -164,8 +160,11 @@ serve(async (req) => {
     }
 
     // Create Payment Intent for rental fee (immediate capture)
+    const serviceFee = booking.service_fee ?? Math.round(booking.total_rental_fee * 0.1 * 100) / 100;
+    const totalCharge = booking.total_rental_fee + serviceFee;
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(booking.total_rental_fee * 100), // Convert to cents
+      amount: Math.round(totalCharge * 100), // Convert to cents
       currency: 'eur',
       customer: customerId,
       setup_future_usage: 'off_session',

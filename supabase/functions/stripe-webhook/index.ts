@@ -161,6 +161,8 @@ serve(async (req) => {
                       <p><strong>Rental Period:</strong><br>${startDate} - ${endDate}</p>
                       <p><strong>Pickup Location:</strong><br>${booking.items.pickup_address}</p>
                       <p><strong>Rental Fee:</strong> €${booking.total_rental_fee.toFixed(2)}</p>
+                      <p><strong>Service Fee (10%):</strong> €${(booking.service_fee || 0).toFixed(2)}</p>
+                      <p><strong>Total Paid:</strong> €${(booking.total_rental_fee + (booking.service_fee || 0)).toFixed(2)}</p>
                     </div>
                     
                     <h3>What's Next?</h3>

@@ -6,7 +6,8 @@ export const emailTemplates = {
     itemTitle: string;
     startDate: string;
     endDate: string;
-    totalFee: number;
+    rentalFee: number;
+    serviceFee: number;
     pickupAddress: string;
   }) => ({
     subject: `Booking Confirmed: ${data.itemTitle}`,
@@ -20,7 +21,9 @@ export const emailTemplates = {
           <h3 style="margin-top: 0;">${data.itemTitle}</h3>
           <p><strong>Rental Period:</strong><br>${data.startDate} - ${data.endDate}</p>
           <p><strong>Pickup Location:</strong><br>${data.pickupAddress}</p>
-          <p><strong>Rental Fee:</strong> €${data.totalFee.toFixed(2)}</p>
+          <p><strong>Rental Fee:</strong> €${data.rentalFee.toFixed(2)}</p>
+          <p><strong>Service Fee (10%):</strong> €${data.serviceFee.toFixed(2)}</p>
+          <p><strong>Total Paid:</strong> €${(data.rentalFee + data.serviceFee).toFixed(2)}</p>
         </div>
         
         <h3>What's Next?</h3>

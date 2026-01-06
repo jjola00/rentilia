@@ -3,7 +3,6 @@
 import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CATEGORIES } from '@/lib/constants/categories';
-import { VALUE_BAND_OPTIONS } from '@/lib/constants/value-bands';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -42,7 +41,6 @@ interface Item {
   owner_id: string;
   created_at: string;
   min_rental_days: number;
-  max_rental_days: number;
   pickup_type: 'renter_pickup' | 'owner_delivery';
   is_top_pick?: boolean;
   profiles?: {
@@ -59,7 +57,6 @@ function BrowsePageContent() {
   const [searchTerm, setSearchTerm] = React.useState(searchParams.get('q') || '');
   const [category, setCategory] = React.useState(searchParams.get('category') || 'all');
   const [priceRange, setPriceRange] = React.useState([Number(searchParams.get('price')) || 499]);
-  const [valueBand, setValueBand] = React.useState(searchParams.get('value_band') || 'all');
   const [city, setCity] = React.useState(searchParams.get('city') || '');
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(() => {
     const from = searchParams.get('from');
@@ -76,7 +73,7 @@ function BrowsePageContent() {
 
   React.useEffect(() => {
     loadItems();
-  }, [category, priceRange, valueBand, searchTerm, city, pickupAvailable, deliveryAvailable, dateRange]);
+  }, [category, priceRange, searchTerm, city, pickupAvailable, deliveryAvailable, dateRange]);
 
   const loadItems = async () => {
     setLoading(true);
@@ -104,11 +101,6 @@ function BrowsePageContent() {
       // Apply price filter (only if less than max and greater than 0)
       if (priceRange && priceRange[0] > 0 && priceRange[0] < 499) {
         query = query.lte('price_per_day', priceRange[0]);
-      }
-
-      // Apply value band filter
-      if (valueBand && valueBand !== 'all') {
-        query = query.eq('value_band', valueBand);
       }
 
       // Apply pickup/delivery filters
@@ -144,8 +136,7 @@ function BrowsePageContent() {
       if (dateRange?.from && dateRange?.to) {
         const days = differenceInCalendarDays(dateRange.to, dateRange.from) + 1;
         filteredData = filteredData.filter((item: any) => 
-          (!item.min_rental_days || days >= item.min_rental_days) &&
-          (!item.max_rental_days || days <= item.max_rental_days)
+          (!item.min_rental_days || days >= item.min_rental_days)
         );
       }
 
@@ -203,23 +194,6 @@ function BrowsePageContent() {
                   onValueChange={setPriceRange}
                 />
                 <p className="text-xs text-muted-foreground">Set to max (€500+) to see all items</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Value Band</Label>
-                <Select value={valueBand} onValueChange={setValueBand}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All value bands" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All value bands</SelectItem>
-                    {VALUE_BAND_OPTIONS.map((band) => (
-                      <SelectItem key={band.value} value={band.value}>
-                        {band.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-2">

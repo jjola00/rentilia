@@ -28,6 +28,7 @@ interface BookingData {
   start_datetime: string;
   end_datetime: string;
   total_rental_fee: number;
+  service_fee: number;
   status: string;
   items: {
     id: string;
@@ -466,6 +467,7 @@ export default function MyBookingsPage() {
       'end_date',
       'status',
       'rental_fee',
+      'service_fee',
       'total_charged',
     ];
 
@@ -478,6 +480,7 @@ export default function MyBookingsPage() {
 
     const rows = filtered.map((booking) => {
       const rentalFee = booking.total_rental_fee ?? 0;
+      const serviceFee = booking.service_fee ?? 0;
       return {
         booking_id: booking.id,
         item_title: booking.items?.title || 'Unknown',
@@ -485,7 +488,8 @@ export default function MyBookingsPage() {
         end_date: format(new Date(booking.end_datetime), 'yyyy-MM-dd'),
         status: booking.status,
         rental_fee: rentalFee.toFixed(2),
-        total_charged: rentalFee.toFixed(2),
+        service_fee: serviceFee.toFixed(2),
+        total_charged: (rentalFee + serviceFee).toFixed(2),
       };
     });
 
@@ -648,7 +652,12 @@ export default function MyBookingsPage() {
                 </div>
                 <div className="text-right">
                   {getStatusBadge(booking.status)}
-                  <p className="text-sm font-medium mt-2">€{booking.total_rental_fee.toFixed(2)}</p>
+                  <p className="text-sm font-medium mt-2">
+                    €{(booking.total_rental_fee + (booking.service_fee || 0)).toFixed(2)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Includes €{(booking.service_fee || 0).toFixed(2)} service fee
+                  </p>
                 </div>
               </div>
               

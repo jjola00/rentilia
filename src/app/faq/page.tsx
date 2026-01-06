@@ -5,14 +5,19 @@ const FAQS = [
       'Rentilia lets people list items for rent and book them from nearby owners. Choose dates, pay securely at checkout, and pick up or arrange delivery based on the listing.',
   },
   {
+    question: 'Is ID verification required?',
+    answer:
+      'Yes. All users must complete ID verification before renting or listing items on Rentilia.',
+  },
+  {
     question: 'Is there a security deposit?',
     answer:
       'No. We do not charge a security deposit. Our platform fee includes insurance coverage for eligible claims.',
   },
   {
-    question: 'How are replacement values used?',
+    question: 'Is insurance included?',
     answer:
-      'Replacement value helps determine insurance and coverage tiers. It is not a charge, but it guides protection and risk limits for the listing.',
+      'Yes. Our platform fee includes insurance coverage for eligible claims. We’ll guide you through the process if a claim is needed.',
   },
   {
     question: 'What happens if an item is damaged?',
