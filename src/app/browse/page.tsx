@@ -43,9 +43,7 @@ interface Item {
   min_rental_days: number;
   pickup_type: 'renter_pickup' | 'owner_delivery';
   is_top_pick?: boolean;
-  profiles?: {
-    city: string | null;
-  } | null;
+  owner_city?: string | null;
 }
 
 function BrowsePageContent() {
@@ -84,7 +82,7 @@ function BrowsePageContent() {
 
       let query = supabase
         .from('items')
-        .select(`*, profiles(city)`)
+        .select('*')
         .eq('is_available', true)
         .order('created_at', { ascending: false });
 
@@ -124,12 +122,29 @@ function BrowsePageContent() {
 
       if (error) throw error;
 
-      // Filter by location on client side (since we need to join with profiles)
+      // Filter by location on client side using public profile cities
       let filteredData = data || [];
-      if (city) {
-        filteredData = filteredData.filter((item: any) => 
-          item.profiles?.city?.toLowerCase().includes(city.toLowerCase())
-        );
+      if (city && filteredData.length > 0) {
+        const ownerIds = Array.from(new Set(filteredData.map((item: any) => item.owner_id).filter(Boolean)));
+        if (ownerIds.length > 0) {
+          const { data: profileRows, error: profileError } = await supabase
+            .from('profiles_public')
+            .select('id,city')
+            .in('id', ownerIds);
+
+          if (profileError) throw profileError;
+
+          const cityMap = (profileRows || []).reduce<Record<string, string | null>>((acc, profile) => {
+            acc[profile.id] = profile.city;
+            return acc;
+          }, {});
+
+          const cityLower = city.toLowerCase();
+          filteredData = filteredData.filter((item: any) => {
+            const ownerCity = cityMap[item.owner_id] || '';
+            return ownerCity.toLowerCase().includes(cityLower);
+          });
+        }
       }
 
       // Filter by requested rental duration against item min/max days

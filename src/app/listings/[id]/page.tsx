@@ -47,6 +47,7 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import Rating from '@/components/shared/rating';
+import { PhotoUpload } from '@/components/items/PhotoUpload';
 
 interface ItemDetails {
   id: string;
@@ -101,6 +102,7 @@ export default function ItemDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState<Partial<ItemDetails>>({});
+  const [editPhotos, setEditPhotos] = useState<string[]>([]);
 
   useEffect(() => {
     loadItemDetails();
@@ -119,7 +121,7 @@ export default function ItemDetailPage() {
       setItem(itemData);
 
       const { data: ownerData, error: ownerError } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('id, full_name, avatar_url, city')
         .eq('id', itemData.owner_id)
         .single();
@@ -142,7 +144,7 @@ export default function ItemDetailPage() {
 
       if (reviewerIds.length > 0) {
         const { data: profileRows, error: profileError } = await supabase
-          .from('profiles')
+          .from('profiles_public')
           .select('id,full_name,avatar_url')
           .in('id', reviewerIds);
 
@@ -231,6 +233,7 @@ export default function ItemDetailPage() {
         min_rental_days: item.min_rental_days,
         pickup_address: item.pickup_address,
       });
+      setEditPhotos(item.photo_urls || []);
       setIsEditing(true);
     }
   };
@@ -238,6 +241,7 @@ export default function ItemDetailPage() {
   const cancelEditing = () => {
     setIsEditing(false);
     setEditForm({});
+    setEditPhotos([]);
   };
 
   const saveChanges = async () => {
@@ -245,7 +249,17 @@ export default function ItemDetailPage() {
 
     setSaving(true);
     try {
-      const updatePayload = { ...editForm };
+      if (editPhotos.length < 4) {
+        setSaving(false);
+        toast({
+          variant: 'destructive',
+          title: 'Photos required',
+          description: 'Please keep at least 4 photos for your listing.',
+        });
+        return;
+      }
+
+      const updatePayload = { ...editForm, photo_urls: editPhotos };
       const { error } = await supabase
         .from('items')
         .update(updatePayload)
@@ -397,6 +411,17 @@ export default function ItemDetailPage() {
                         value={editForm.description || ''}
                         onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Listing Photos</Label>
+                      <PhotoUpload
+                        photoUrls={editPhotos}
+                        onPhotosChange={setEditPhotos}
+                        maxPhotos={10}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Photos uploaded: {editPhotos.length}/4
+                      </p>
                     </div>
                     <div>
                       <Label htmlFor="min_rental_days">Minimum Rental Days</Label>

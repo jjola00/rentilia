@@ -60,6 +60,10 @@ serve(async (req) => {
       throw new Error('Booking is not in requested status');
     }
 
+    if (booking.expires_at && new Date(booking.expires_at) < new Date()) {
+      throw new Error('This booking request has expired. Please create a new booking.');
+    }
+
     // Check if customer already exists for this user
     let customerId: string | undefined;
     
@@ -104,7 +108,7 @@ serve(async (req) => {
       .from('bookings')
       .select('id, status, start_datetime, end_datetime')
       .eq('item_id', booking.item_id)
-      .in('status', ['requested', 'paid', 'picked_up', 'returned_waiting_owner'])
+      .in('status', ['paid', 'picked_up', 'returned_waiting_owner'])
       .not('id', 'eq', bookingId)
       .lte('start_datetime', endDate.toISOString())
       .gte('end_datetime', startDate.toISOString());
@@ -113,7 +117,22 @@ serve(async (req) => {
       throw new Error('Unable to verify booking availability');
     }
 
-    if (overlappingBookings && overlappingBookings.length > 0) {
+    const nowIso = new Date().toISOString();
+    const { data: requestedHolds, error: requestedError } = await supabase
+      .from('bookings')
+      .select('id, status, start_datetime, end_datetime')
+      .eq('item_id', booking.item_id)
+      .eq('status', 'requested')
+      .gte('expires_at', nowIso)
+      .not('id', 'eq', bookingId)
+      .lte('start_datetime', endDate.toISOString())
+      .gte('end_datetime', startDate.toISOString());
+
+    if (requestedError) {
+      throw new Error('Unable to verify booking availability');
+    }
+
+    if ((overlappingBookings && overlappingBookings.length > 0) || (requestedHolds && requestedHolds.length > 0)) {
       throw new Error('This item is already booked for the selected dates');
     }
 
@@ -184,6 +203,7 @@ serve(async (req) => {
       .from('bookings')
       .update({
         payment_intent_id: paymentIntent.id,
+        service_fee: serviceFee,
       })
       .eq('id', bookingId);
 

@@ -355,6 +355,9 @@ function BookingFormContent() {
                     <span>Total</span>
                     <span>€{total.toFixed(2)}</span>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Booking requests expire after 15 minutes if unpaid.
+                  </p>
 
                   <Button
                     className="w-full"

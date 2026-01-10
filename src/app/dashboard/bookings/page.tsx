@@ -99,6 +99,7 @@ export default function MyBookingsPage() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [statementStart, setStatementStart] = useState('');
   const [statementEnd, setStatementEnd] = useState('');
+  const [profileMap, setProfileMap] = useState<Record<string, { full_name: string | null }>>({});
 
   useEffect(() => {
     if (user) {
@@ -178,8 +179,40 @@ export default function MyBookingsPage() {
 
       if (ownerError) throw ownerError;
 
-      setAsRenterBookings(renterData || []);
-      setAsOwnerBookings(ownerData || []);
+      const renterBookings = renterData || [];
+      const ownerBookings = ownerData || [];
+
+      setAsRenterBookings(renterBookings);
+      setAsOwnerBookings(ownerBookings);
+
+      const profileIds = new Set<string>();
+      renterBookings.forEach((booking) => {
+        if (booking.items?.owner_id) profileIds.add(booking.items.owner_id);
+      });
+      ownerBookings.forEach((booking) => {
+        if (booking.renter_id) profileIds.add(booking.renter_id);
+      });
+
+      if (profileIds.size) {
+        const { data: profileRows, error: profileError } = await supabase
+          .from('profiles_public')
+          .select('id,full_name')
+          .in('id', Array.from(profileIds));
+
+        if (profileError) throw profileError;
+
+        const nextProfileMap = (profileRows || []).reduce<Record<string, { full_name: string | null }>>(
+          (acc, profile) => {
+            acc[profile.id] = { full_name: profile.full_name };
+            return acc;
+          },
+          {}
+        );
+
+        setProfileMap(nextProfileMap);
+      } else {
+        setProfileMap({});
+      }
     } catch (error) {
       console.error('Error loading bookings:', error);
       toast({
@@ -621,9 +654,10 @@ export default function MyBookingsPage() {
     const showPickupPhotoButton = !isOwner && booking.status === 'picked_up';
     const showConfirmReturnButton = isOwner && booking.status === 'returned_waiting_owner';
     const canReview = booking.status === 'closed_no_damage' || booking.status === 'deposit_captured';
-    const counterparty = isOwner
-      ? (booking.renter_id ? `Renter: ${booking.renter_id}` : 'Renter')
-      : (booking.items?.owner_id ? `Owner: ${booking.items.owner_id}` : 'Owner');
+    const counterpartyId = isOwner ? booking.renter_id : booking.items?.owner_id;
+    const counterpartyName = counterpartyId ? profileMap[counterpartyId]?.full_name : null;
+    const counterpartyLabel = isOwner ? 'Renter' : 'Owner';
+    const counterparty = counterpartyName ? `${counterpartyLabel}: ${counterpartyName}` : counterpartyLabel;
     const pickupPhotos = booking.booking_photos?.filter((photo) => photo.photo_type === 'pickup') || [];
     const returnPhotos = booking.booking_photos?.filter((photo) => photo.photo_type === 'return') || [];
     const myReview = booking.reviews?.find((review) => review.reviewer_id === user?.id) || null;
@@ -723,6 +757,11 @@ export default function MyBookingsPage() {
                   </Button>
                 )}
               </div>
+              {!canReview && (booking.status === 'paid' || booking.status === 'picked_up' || booking.status === 'returned_waiting_owner') && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Reviews unlock after the return is confirmed.
+                </p>
+              )}
 
               {myReview && (
                 <p className="mt-2 text-xs text-muted-foreground">

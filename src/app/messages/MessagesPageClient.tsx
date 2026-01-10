@@ -43,7 +43,6 @@ export default function MessagesPageClient() {
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
-  const [newRecipientEmail, setNewRecipientEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const preselectUserId = searchParams.get('userId');
@@ -61,7 +60,7 @@ export default function MessagesPageClient() {
 
     try {
       const { data: profile, error } = await supabase
-        .from('profiles')
+        .from('profiles_public')
         .select('id,full_name,avatar_url')
         .eq('id', userId)
         .single();
@@ -113,7 +112,7 @@ export default function MessagesPageClient() {
 
       if (counterparties.length) {
         const { data: profileRows, error: profileError } = await supabase
-          .from('profiles')
+          .from('profiles_public')
           .select('id,full_name,avatar_url')
           .in('id', counterparties);
 
@@ -189,31 +188,6 @@ export default function MessagesPageClient() {
 
   const selectedConversation = conversations.find((c) => c.user.id === selectedUserId) || null;
 
-  const startNewConversation = async () => {
-    if (!newRecipientEmail || !user) return;
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url')
-        .eq('email', newRecipientEmail)
-        .single();
-
-      if (error || !profile) {
-        throw new Error('User not found');
-      }
-
-      setProfiles((prev) => ({ ...prev, [profile.id]: profile }));
-      setSelectedUserId(profile.id);
-      setNewRecipientEmail('');
-    } catch (err: any) {
-      toast({
-        title: 'User not found',
-        description: err.message || 'Could not find a user with that email',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const sendMessage = async () => {
     if (!user || !selectedUserId || !messageInput.trim()) return;
     setSending(true);
@@ -247,7 +221,7 @@ export default function MessagesPageClient() {
       <MessageSquare className="h-16 w-16 text-muted-foreground" />
       <h3 className="mt-4 text-xl font-semibold">No messages yet</h3>
       <p className="mt-2 text-sm text-muted-foreground">
-        Start a new conversation by entering an email.
+        Start a new conversation from a listing or booking.
       </p>
     </div>
   );
@@ -269,23 +243,9 @@ export default function MessagesPageClient() {
         <div className="w-full md:w-1/3 border-r flex flex-col">
           <div className="p-4 border-b space-y-3">
             <h1 className="text-2xl font-headline font-bold">Messages</h1>
-            <div className="relative">
-              <Input
-                placeholder="Start new via email"
-                className="pl-3"
-                value={newRecipientEmail}
-                onChange={(e) => setNewRecipientEmail(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && startNewConversation()}
-              />
-              <Button
-                size="sm"
-                className="mt-2 w-full"
-                onClick={startNewConversation}
-                disabled={!newRecipientEmail}
-              >
-                Start conversation
-              </Button>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Open a listing or booking to start a conversation.
+            </p>
             <div className="relative">
               <Input placeholder="Search messages..." className="pl-9" disabled />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

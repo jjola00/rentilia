@@ -65,7 +65,7 @@ export default function UserProfilePage() {
       try {
         const [profileRes, listingsRes, reviewsRes] = await Promise.all([
           supabase
-            .from('profiles')
+            .from('profiles_public')
             .select('id,full_name,avatar_url,city,bio,created_at')
             .eq('id', userId)
             .single(),
@@ -94,7 +94,7 @@ export default function UserProfilePage() {
 
         if (reviewerIds.length > 0) {
           const { data: profileRows, error: profileError } = await supabase
-            .from('profiles')
+            .from('profiles_public')
             .select('id,full_name,avatar_url')
             .in('id', reviewerIds);
 
