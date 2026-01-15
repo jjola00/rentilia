@@ -44,6 +44,7 @@ next-env.d.ts
 .env.production.local
 
 md-files/
+docs/external-providers.md
 
 # supabase
 .supabase/

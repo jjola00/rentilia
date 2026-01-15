@@ -1,31 +1,19 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
-import { Banknote, GraduationCap, Handshake, Target, Triangle, Users, Code } from "lucide-react"
+import { Handshake, Target, Users } from "lucide-react"
 
 export default function AboutPage() {
   const teamMembers = [
-    { 
-      name: "Oyinkansola Faith Olorunleke", 
-      role: "Founder & CEO", 
+    {
+      name: "Oyinkansola Faith Olorunleke",
+      role: "Founder & CEO",
       avatarSrc: "/team/oyin/pfp.png",
-      achievements: [
-        { logoSrc: "/team/oyin/laidlaw.png", text: "Laidlaw Leadership & Research Scholar" },
-        { logoSrc: "/team/oyin/ptsb.png", text: "Banking Customer Service Advisor, permanent tsb" },
-        { logoSrc: "/team/oyin/tcd.png", text: "B.A. Biological & Biomedical Sciences, Trinity College Dublin" },
-        { logoSrc: "/team/oyin/dubair.png", text: "Receptionist, Dublin Airport" },
-      ]
     },
-    { 
-      name: "Jay Jay Olajitan", 
-      role: "Co-founder & CTO", 
+    {
+      name: "Jay Jay Olajitan",
+      role: "Co-founder & CTO",
       avatarSrc: "/team/jay/jjpfp.png",
-      achievements: [
-        { logoSrc: "/team/jay/patch.png", text: "Patch Alumni (Summer 2025)" },
-        { logoSrc: "/team/jay/dogpatch.png", text: "Development Intern, Dogpatch Labs" },
-        { logoSrc: "/team/jay/deveire.png", text: "Development Intern, Deveire" },
-        { logoSrc: "/team/jay/ise.png", text: "Immersive Software Engineering, University of Limerick" },
-      ]
     },
   ]
 
@@ -91,35 +79,17 @@ export default function AboutPage() {
         {/* Team Section */}
         <section>
           <h2 className="text-3xl font-bold text-center mb-8">Meet the Team</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto justify-items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto justify-items-center">
             {teamMembers.map((member) => (
-              <Card key={member.name} className="text-center w-full max-w-md">
-                <CardContent className="p-8">
+              <Card key={member.name} className="text-center w-full max-w-[320px] min-h-[320px]">
+                <CardContent className="p-8 h-full flex flex-col">
                   <Avatar className="h-28 w-28 mx-auto mb-4">
                     <AvatarImage src={member.avatarSrc} alt={member.name} />
                     <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
                   </Avatar>
-                  <h4 className="text-lg font-semibold">{member.name}</h4>
-                  <p className="text-sm text-primary">{member.role}</p>
+                  <h4 className="text-xl font-semibold">{member.name}</h4>
+                  <p className="mt-auto text-base font-semibold text-primary">{member.role}</p>
                   
-                  {member.achievements && (
-                    <div className="mt-4 pt-4 border-t border-border text-left space-y-3">
-                      {member.achievements.map((achievement, index) => (
-                        <div key={index} className="flex items-center gap-3">
-                          {"logoSrc" in achievement && achievement.logoSrc ? (
-                            <img
-                              src={achievement.logoSrc}
-                              alt={achievement.text}
-                              className="h-6 w-6 rounded-full object-contain"
-                            />
-                          ) : (
-                            <achievement.icon className="h-5 w-5 text-muted-foreground" />
-                          )}
-                          <span className="text-sm text-muted-foreground">{achievement.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             ))}
