@@ -26,8 +26,7 @@ export default function HomePage() {
             Rent Anything, Anywhere
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground md:text-xl">
-            From power tools to party supplies, find what you need from people
-            in your community. Our beta is launching soon!
+            From film cameras to studio microphones, find the media gear you need from creators in your community. Our beta is launching soon!
           </p>
           <div className="mt-8">
             <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">

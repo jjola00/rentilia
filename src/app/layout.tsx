@@ -5,7 +5,7 @@ import AppShell from '@/components/layout/AppShell';
 
 export const metadata: Metadata = {
   title: 'Rentilia - Rent Anything, Anywhere',
-  description: 'A peer-to-peer rental marketplace for everything you need.',
+  description: 'A peer-to-peer rental marketplace for film, music, and media equipment.',
 };
 
 const themeScript = `

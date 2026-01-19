@@ -202,8 +202,7 @@ export default function Home() {
             Rent Anything, Anywhere
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground md:text-xl">
-            From power tools to party supplies, find what you need from people
-            in your community.
+            From film cameras to studio microphones, find the media gear you need from creators in your community.
           </p>
           <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-2 sm:flex-row">
             <div className="relative flex-grow">
@@ -496,7 +495,7 @@ export default function Footer() {
           <div className="flex flex-col items-center md:items-start space-y-4 md:col-span-1">
             <Logo />
             <p className="max-w-xs text-sm text-muted-foreground">
-              Rent anything, anywhere. Your community marketplace.
+              Your community marketplace for film, music, and media gear.
             </p>
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <span>© {new Date().getFullYear()} Rentilia, Inc.</span>
