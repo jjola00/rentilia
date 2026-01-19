@@ -436,10 +436,10 @@ export default function AboutPage() {
             <h2 className="text-3xl font-bold text-center mb-8">Our Story</h2>
             <div className="space-y-6 text-muted-foreground leading-relaxed">
                 <p>
-                    Rentilia was born from a simple observation: we all own things we barely use. A power drill for a single project, a large tent for an annual camping trip, a set of party speakers for a one-time event. These items sit idle, collecting dust, while someone just a few blocks away is looking to buy that exact same thing for temporary use.
+                    Rentilia was born from a simple observation: we all own creative equipment that we barely use. A specific camera lens for a single photoshoot, a high-end microphone for a one-off podcast recording, or a drone for that perfect cinematic shot. These items sit idle, collecting dust, while a fellow creator just a few blocks away is looking to use that exact same piece of gear for a project.
                 </p>
                 <p>
-                    We thought, "What if we could create a platform that connects these two people?" A platform that makes it as easy to rent a neighbor's lawnmower as it is to order a pizza. This idea sparked the creation of Rentilia, a peer-to-peer marketplace designed to make renting simple, safe, and beneficial for everyone involved.
+                    We thought, "What if we could create a platform that connects these two creators?" A platform that makes it as easy to rent a neighbor's gimbal as it is to order a pizza. This idea sparked the creation of Rentilia, a peer-to-peer marketplace designed to make renting media equipment simple, safe, and beneficial for everyone involved.
                 </p>
                 <p>
                     From a small idea sketched on a napkin, we've grown into a passionate team dedicated to building a more sustainable and community-focused world. We're just getting started, and we're thrilled to have you on this journey with us.
