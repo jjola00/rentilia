@@ -1,10 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 // Email service configuration
-// For production, integrate with SendGrid, Resend, or similar
-// For now, this logs emails (you'll need to add your email service)
-
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const RESEND_FROM = 'Rentilia <noreply@rentilia.ie>';
 
 interface EmailRequest {
   to: string;
@@ -24,7 +22,7 @@ serve(async (req) => {
   }
 
   try {
-    const { to, subject, html, from = 'Rentilia <onboarding@resend.dev>' }: EmailRequest = await req.json();
+    const { to, subject, html, from = RESEND_FROM }: EmailRequest = await req.json();
 
     if (!to || !subject || !html) {
       throw new Error('Missing required fields: to, subject, html');
