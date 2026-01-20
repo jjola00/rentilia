@@ -8,12 +8,15 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabase/client';
 import { Loader2, Mail } from 'lucide-react';
+import { useConfetti } from '@/hooks/use-confetti';
 
 export default function WaitlistPage() {
   const { toast } = useToast();
   const supabase = createClient();
+  const triggerConfetti = useConfetti();
 
   const [email, setEmail] = useState('');
+  const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -51,6 +54,13 @@ export default function WaitlistPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedEmail = email.trim().toLowerCase();
+    const trimmedCompany = company.trim();
+    if (trimmedCompany) {
+      setSuccess(true);
+      setEmail('');
+      setCompany('');
+      return;
+    }
     if (!trimmedEmail) {
       toast({
         variant: 'destructive',
@@ -104,7 +114,9 @@ export default function WaitlistPage() {
       }
 
       setSuccess(true);
+      triggerConfetti();
       setEmail('');
+      setCompany('');
     } catch (error) {
       console.error('Waitlist signup error:', error);
       toast({
@@ -156,6 +168,21 @@ export default function WaitlistPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div
+                  className="absolute left-[-10000px] top-auto h-0 w-0 overflow-hidden"
+                  aria-hidden="true"
+                >
+                  <Label htmlFor="company">Company</Label>
+                  <Input
+                    id="company"
+                    name="company"
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    autoComplete="off"
+                    tabIndex={-1}
+                  />
+                </div>
                 <div className="space-y-2 text-left">
                   <Label htmlFor="email">Email</Label>
                   <Input

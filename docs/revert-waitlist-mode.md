@@ -2,7 +2,57 @@
 
 This document outlines the steps to disable the waitlist mode and restore the full application functionality for the beta launch.
 
-## 1. Remove Middleware Redirect
+## Option 1: Keep waitlist mode but restore the previous allowlist
+
+If you want to keep the waitlist-only experience but allow internal API routes, file-extension requests, and the Supabase auth callback again, update the allowlist in `src/middleware.ts` to the prior behavior.
+
+**File:** `src/middleware.ts`
+
+**Action:** Replace the allowlist block with the version below.
+
+```typescript
+  const { pathname } = request.nextUrl
+
+  const allowedPaths = ['/', '/waitlist', '/auth/callback']
+
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    allowedPaths.includes(pathname) ||
+    pathname.includes('.')
+  ) {
+    // Continue with Supabase session refresh for allowed paths
+    let supabaseResponse = NextResponse.next({
+      request,
+    })
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+            supabaseResponse = NextResponse.next({
+              request,
+            })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
+    await supabase.auth.getUser()
+    return supabaseResponse
+  }
+```
+
+## Option 2: Remove middleware redirect entirely (full revert)
 
 The primary change to disable is the redirect logic in the middleware.
 
@@ -60,7 +110,7 @@ export const config = {
 }
 ```
 
-## 2. Restore Homepage
+## Option 3: Restore Homepage (only if you disable waitlist mode)
 
 The homepage was replaced with content from the "About Us" page.
 

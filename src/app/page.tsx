@@ -10,11 +10,13 @@ export default function HomePage() {
       name: "Oyinkansola Faith Olorunleke",
       role: "Founder & CEO",
       avatarSrc: "/team/oyin/pfp.png",
+      linkedinUrl: "https://www.linkedin.com/in/oyinkansola-faith-olorunleke/",
     },
     {
       name: "Jay Jay Olajitan",
       role: "Co-founder & CTO",
       avatarSrc: "/team/jay/jjpfp.png",
+      linkedinUrl: "https://www.linkedin.com/in/jay-jay-olajitan/",
     },
   ]
 
@@ -90,16 +92,27 @@ export default function HomePage() {
             <h2 className="text-3xl font-bold text-center mb-8">Meet the Team</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto justify-items-center">
               {teamMembers.map((member) => (
-                <Card key={member.name} className="text-center w-full max-w-[320px] min-h-[320px]">
-                  <CardContent className="p-8 h-full flex flex-col">
-                    <Avatar className="h-28 w-28 mx-auto mb-4">
-                      <AvatarImage src={member.avatarSrc} alt={member.name} />
-                      <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <h4 className="text-xl font-semibold">{member.name}</h4>
-                    <p className="mt-auto text-base font-semibold text-primary">{member.role}</p>
-                  </CardContent>
-                </Card>
+                <Link
+                  key={member.name}
+                  href={member.linkedinUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Open ${member.name}'s LinkedIn`}
+                  className="group w-full max-w-[320px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <Card className="text-center w-full min-h-[320px] transition-all duration-200 hover:shadow-xl hover:ring-2 hover:ring-primary/50 hover:ring-offset-2 hover:ring-offset-background">
+                    <CardContent className="p-8 h-full flex flex-col">
+                      <Avatar className="h-36 w-36 mx-auto mb-4">
+                        <AvatarImage src={member.avatarSrc} alt={member.name} />
+                        <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <h4 className="text-2xl font-semibold transition-colors duration-200 group-hover:text-primary">
+                        {member.name}
+                      </h4>
+                      <p className="mt-auto text-base font-semibold text-muted-foreground">{member.role}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           </section>
