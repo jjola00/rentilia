@@ -135,7 +135,7 @@ export default function WaitlistPage() {
         <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Beta 2026</p>
         <h1 className="text-4xl md:text-6xl font-bold font-headline">Join the Rentilia waitlist</h1>
         <p className="text-muted-foreground text-lg">
-          Be first to access Rentilia when the beta opens next year. We’ll email you with early access details.
+          Be first to access Rentilia when the beta opens this year. We’ll email you with early access details.
         </p>
       </div>
 
