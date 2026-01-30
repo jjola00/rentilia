@@ -11,14 +11,14 @@ export function Logo({ className }: { className?: string }) {
     <div className={cn('flex items-center', className)}>
       {/* Show placeholder during SSR/hydration to prevent flash */}
       {!isReady ? (
-        <div className="h-40 w-[750px]" />
+        <div className="w-36 h-auto md:w-auto md:h-40" />
       ) : (
         <Image
           src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
           alt="Rentilia"
           width={750}
           height={200}
-          className="h-40 w-auto"
+          className="w-36 h-auto md:w-auto md:h-40"
           priority
         />
       )}
