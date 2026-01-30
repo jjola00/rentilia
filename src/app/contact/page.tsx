@@ -13,6 +13,17 @@ import { Loader2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/AuthProvider"
 
+function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }
+  return text.replace(/[&<>"']/g, (char) => htmlEntities[char])
+}
+
 export default function ContactPage() {
   const { toast } = useToast()
   const { user } = useAuth()
@@ -73,11 +84,11 @@ export default function ContactPage() {
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2>New Contact Message</h2>
-                <p><strong>Name:</strong> ${name.trim()}</p>
-                <p><strong>Email:</strong> ${email.trim()}</p>
-                <p><strong>Subject:</strong> ${subject.trim()}</p>
+                <p><strong>Name:</strong> ${escapeHtml(name.trim())}</p>
+                <p><strong>Email:</strong> ${escapeHtml(email.trim())}</p>
+                <p><strong>Subject:</strong> ${escapeHtml(subject.trim())}</p>
                 <p><strong>Message:</strong></p>
-                <p>${message.trim().replace(/\n/g, "<br />")}</p>
+                <p>${escapeHtml(message.trim()).replace(/\n/g, "<br />")}</p>
               </div>
             `,
           }),

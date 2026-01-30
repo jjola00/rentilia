@@ -18,7 +18,7 @@ export default function Footer() {
              <div className="flex items-center justify-center md:justify-end gap-2 text-sm text-muted-foreground">
               <span>© {new Date().getFullYear()} Rentilia, Inc.</span>
               <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
-                <Link href="https://www.linkedin.com" target="_blank" rel="noopener noreferrer">
+                <Link href="https://www.linkedin.com/company/rentilia/" target="_blank" rel="noopener noreferrer">
                   <Linkedin className="h-4 w-4" />
                   <span className="sr-only">LinkedIn</span>
                 </Link>

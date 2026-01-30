@@ -6,13 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { createClient } from '@/lib/supabase/client';
 import { Loader2, Mail } from 'lucide-react';
 import { useConfetti } from '@/hooks/use-confetti';
 
 export default function WaitlistPage() {
   const { toast } = useToast();
-  const supabase = createClient();
   const triggerConfetti = useConfetti();
 
   const [email, setEmail] = useState('');
@@ -20,47 +18,19 @@ export default function WaitlistPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const sendConfirmationEmail = async (targetEmail: string) => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseAnonKey) return;
-
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${supabaseAnonKey}`,
-        apikey: supabaseAnonKey,
-      },
-      body: JSON.stringify({
-        to: targetEmail,
-        subject: "You're on the Rentilia beta waitlist",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>You're in!</h2>
-            <p>Thanks for joining the Rentilia beta waitlist.</p>
-            <p>We'll email you when early access opens. You'll be the first to know when Rentilia launches.</p>
-            <p style="margin-top: 24px;">- The Rentilia Team</p>
-          </div>
-        `,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(await response.text());
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedCompany = company.trim();
+
+    // Honeypot check - silently succeed if bot filled it
     if (trimmedCompany) {
       setSuccess(true);
       setEmail('');
       setCompany('');
       return;
     }
+
     if (!trimmedEmail) {
       toast({
         variant: 'destructive',
@@ -82,33 +52,34 @@ export default function WaitlistPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase
-        .from('waitlist_signups')
-        .insert({
-          email: trimmedEmail,
-          source: 'waitlist-page',
-          confirmation_sent_at: new Date().toISOString(),
-        });
+      const response = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmedEmail }),
+      });
 
-      if (error) {
-        if (error.code === '23505') {
-          setSuccess(true);
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 429) {
           toast({
-            title: 'Already on the list',
-            description: 'This email is already registered for the waitlist.',
+            variant: 'destructive',
+            title: 'Too many attempts',
+            description: 'Please wait a moment before trying again.',
           });
           return;
         }
-        throw error;
+        throw new Error(data.error || 'Signup failed');
       }
 
-      try {
-        await sendConfirmationEmail(trimmedEmail);
-      } catch (mailError) {
-        console.error('Waitlist email error:', mailError);
+      if (data.duplicate) {
         toast({
-          variant: 'destructive',
-          title: 'Email failed',
+          title: 'Already on the list',
+          description: 'This email is already registered for the waitlist.',
+        });
+      } else if (!data.emailSent) {
+        toast({
+          title: "You're on the list!",
           description: 'Signup saved, but confirmation email could not be sent.',
         });
       }
