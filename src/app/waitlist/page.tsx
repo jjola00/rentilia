@@ -6,17 +6,92 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { createClient } from '@/lib/supabase/client';
 import { Loader2, Mail } from 'lucide-react';
 import { useConfetti } from '@/hooks/use-confetti';
 
+// Client-side rate limiting
+const RATE_LIMIT_KEY = 'waitlist_submissions';
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 3;
+
+function isClientRateLimited(): boolean {
+  try {
+    const stored = localStorage.getItem(RATE_LIMIT_KEY);
+    if (!stored) return false;
+
+    const { count, resetTime } = JSON.parse(stored);
+    if (Date.now() > resetTime) {
+      localStorage.removeItem(RATE_LIMIT_KEY);
+      return false;
+    }
+    return count >= RATE_LIMIT_MAX;
+  } catch {
+    return false;
+  }
+}
+
+function recordSubmission(): void {
+  try {
+    const stored = localStorage.getItem(RATE_LIMIT_KEY);
+    const now = Date.now();
+
+    if (!stored) {
+      localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify({ count: 1, resetTime: now + RATE_LIMIT_WINDOW }));
+      return;
+    }
+
+    const { count, resetTime } = JSON.parse(stored);
+    if (now > resetTime) {
+      localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify({ count: 1, resetTime: now + RATE_LIMIT_WINDOW }));
+    } else {
+      localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify({ count: count + 1, resetTime }));
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
 export default function WaitlistPage() {
   const { toast } = useToast();
+  const supabase = createClient();
   const triggerConfetti = useConfetti();
 
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const sendConfirmationEmail = async (targetEmail: string) => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) return;
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${supabaseAnonKey}`,
+        apikey: supabaseAnonKey,
+      },
+      body: JSON.stringify({
+        to: targetEmail,
+        subject: "You're on the Rentilia beta waitlist",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>You're in!</h2>
+            <p>Thanks for joining the Rentilia beta waitlist.</p>
+            <p>We'll email you when early access opens. You'll be the first to know when Rentilia launches.</p>
+            <p style="margin-top: 24px;">- The Rentilia Team</p>
+          </div>
+        `,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +103,16 @@ export default function WaitlistPage() {
       setSuccess(true);
       setEmail('');
       setCompany('');
+      return;
+    }
+
+    // Client-side rate limiting
+    if (isClientRateLimited()) {
+      toast({
+        variant: 'destructive',
+        title: 'Too many attempts',
+        description: 'Please wait a moment before trying again.',
+      });
       return;
     }
 
@@ -50,36 +135,36 @@ export default function WaitlistPage() {
     }
 
     setLoading(true);
+    recordSubmission();
 
     try {
-      const response = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmedEmail }),
-      });
+      const { error } = await supabase
+        .from('waitlist_signups')
+        .insert({
+          email: trimmedEmail,
+          source: 'waitlist-page',
+          confirmation_sent_at: new Date().toISOString(),
+        });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 429) {
+      if (error) {
+        if (error.code === '23505') {
+          setSuccess(true);
           toast({
-            variant: 'destructive',
-            title: 'Too many attempts',
-            description: 'Please wait a moment before trying again.',
+            title: 'Already on the list',
+            description: 'This email is already registered for the waitlist.',
           });
           return;
         }
-        throw new Error(data.error || 'Signup failed');
+        throw error;
       }
 
-      if (data.duplicate) {
+      try {
+        await sendConfirmationEmail(trimmedEmail);
+      } catch (mailError) {
+        console.error('Waitlist email error:', mailError);
         toast({
-          title: 'Already on the list',
-          description: 'This email is already registered for the waitlist.',
-        });
-      } else if (!data.emailSent) {
-        toast({
-          title: "You're on the list!",
+          variant: 'destructive',
+          title: 'Email failed',
           description: 'Signup saved, but confirmation email could not be sent.',
         });
       }
@@ -106,7 +191,7 @@ export default function WaitlistPage() {
         <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Beta 2026</p>
         <h1 className="text-4xl md:text-6xl font-bold font-headline">Join the Rentilia waitlist</h1>
         <p className="text-muted-foreground text-lg">
-          Be first to access Rentilia when the beta opens this year. We’ll email you with early access details.
+          Be first to access Rentilia when the beta opens this year. We'll email you with early access details.
         </p>
       </div>
 
@@ -118,13 +203,13 @@ export default function WaitlistPage() {
               Get early access
             </CardTitle>
             <CardDescription>
-              We’ll only use your email for beta updates.
+              We'll only use your email for beta updates.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {success ? (
               <div className="rounded-lg border border-dashed p-6 text-center">
-                <h2 className="text-xl font-semibold">You’re on the list 🎉</h2>
+                <h2 className="text-xl font-semibold">You're on the list 🎉</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Watch your inbox for confirmation and beta launch updates.
                 </p>
