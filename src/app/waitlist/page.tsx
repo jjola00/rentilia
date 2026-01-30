@@ -132,7 +132,7 @@ export default function WaitlistPage() {
   return (
     <div className="container mx-auto px-4 py-20">
       <div className="mx-auto max-w-2xl text-center space-y-4">
-        <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Beta 2025</p>
+        <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Beta 2026</p>
         <h1 className="text-4xl md:text-6xl font-bold font-headline">Join the Rentilia waitlist</h1>
         <p className="text-muted-foreground text-lg">
           Be first to access Rentilia when the beta opens next year. We’ll email you with early access details.
